@@ -1,9 +1,9 @@
 /**
  * ARKADIA — Interaksi halaman (Vanilla JavaScript, tanpa framework)
  *  1. Tema terang/gelap
- *  2. Navigasi antar halaman (tanpa reload)
- *  3. Autentikasi anggota (Masuk / Daftar / Akun Demo)
- *  4. Pencarian & filter katalog + filter peminjaman (Saya vs Semua)
+ *  2. Navigasi antar halaman + lompat kategori dari Beranda
+ *  3. Autentikasi anggota (Masuk / Daftar / Akun Demo + preselect tier)
+ *  4. Pencarian, filter, toggle Grid/Daftar katalog & scope peminjaman
  *  5. Modal detail buku
  *  6. Modal sewa + kalkulasi biaya real-time via fetch() ke PHP
  *  7. Pratinjau sampul saat menambah buku & validasi form
@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
     const rupiah = (n) => 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
     const findBook = (id) => state.catalog.find((b) => b.id === id);
-    const findMember = (id) => state.members.find((m) => m.id === id);
     const typeShort = (code) => ({ academic: 'Akademik', interactive: 'Interaktif' }[code] || 'Umum');
     const shortAuthor = (a) => String(a).split(/\s*(?:&|,)\s*/)[0];
     const shortClass = (fqcn) => String(fqcn).split('\\').pop();
@@ -34,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function dismissToast(el) {
         if (!el || el.classList.contains('is-leaving')) return;
         el.classList.add('is-leaving');
-        setTimeout(() => el.remove(), 260);
+        setTimeout(() => el.remove(), 240);
     }
     function bindToast(el) {
         $('.toast__close', el)?.addEventListener('click', () => dismissToast(el));
@@ -98,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         $('#authModalTitle').textContent = isReg ? 'Daftar Anggota Baru' : 'Masuk ke Arkadia';
     }
 
-    function openAuth(tabName = 'login', pendingBookId = '') {
+    function openAuth(tabName = 'login', pendingBookId = '', preselectTier = '') {
         if (!authModal) return;
         setAuthTab(tabName);
         const returnTab = pendingBookId ? 'catalog' : currentTab;
@@ -110,6 +109,11 @@ document.addEventListener('DOMContentLoaded', () => {
         $('#authRegReturn').value = returnTab;
         $$('.js-pending-book').forEach((el) => { el.value = pendingBookId || ''; });
         $$('.js-return-tab').forEach((el) => { el.value = returnTab; });
+
+        if (preselectTier) {
+            const radio = $(`#formAuthRegister input[name="tier"][value="${preselectTier}"]`);
+            if (radio) radio.checked = true;
+        }
 
         if (book) {
             authPendingHint.hidden = false;
@@ -124,16 +128,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     authTabs.forEach((t) => t.addEventListener('click', () => setAuthTab(t.dataset.authTab)));
     $$('[data-open-auth]').forEach((btn) => {
-        btn.addEventListener('click', () => openAuth(btn.dataset.openAuth || 'login', ''));
+        btn.addEventListener('click', () => {
+            openAuth(btn.dataset.openAuth || 'login', '', btn.dataset.preselectTier || '');
+        });
     });
 
-    /* ---------- 4. Pencarian & filter katalog + scope peminjaman ---------- */
+    /* ---------- 4. Pencarian, filter, & Grid/List katalog ---------- */
     const searchInput = $('#searchInput');
     const typeFilter = $('#typeFilter');
     const availableOnly = $('#availableOnly');
+    const catalogGrid = $('#catalogGrid');
     const catalogCards = $$('#catalogGrid .book-card');
     const catalogEmpty = $('#catalogEmpty');
     const catalogCount = $('#catalogCount');
+    const btnViewGrid = $('#btnViewGrid');
+    const btnViewList = $('#btnViewList');
     let activeCategory = 'all';
 
     function applyFilters() {
@@ -153,24 +162,41 @@ document.addEventListener('DOMContentLoaded', () => {
         catalogCount.textContent = visible;
     }
 
+    function setActiveCategoryChip(cat) {
+        activeCategory = cat;
+        $$('.chip[data-cat]').forEach((c) => c.classList.toggle('is-active', c.dataset.cat === cat));
+        applyFilters();
+    }
+
     searchInput?.addEventListener('input', applyFilters);
     typeFilter?.addEventListener('change', applyFilters);
     availableOnly?.addEventListener('change', applyFilters);
     $$('.chip[data-cat]').forEach((chip) => {
-        chip.addEventListener('click', () => {
-            activeCategory = chip.dataset.cat;
-            $$('.chip[data-cat]').forEach((c) => c.classList.toggle('is-active', c === chip));
-            applyFilters();
+        chip.addEventListener('click', () => setActiveCategoryChip(chip.dataset.cat));
+    });
+    $$('[data-jump-category]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            setActiveCategoryChip(btn.dataset.jumpCategory || 'all');
+            showPage('catalog');
         });
     });
     $('#btnResetFilter')?.addEventListener('click', () => {
         searchInput.value = '';
         typeFilter.value = 'all';
         availableOnly.checked = false;
-        activeCategory = 'all';
-        $$('.chip[data-cat]').forEach((c) => c.classList.toggle('is-active', c.dataset.cat === 'all'));
-        applyFilters();
+        setActiveCategoryChip('all');
     });
+
+    function setCatalogView(mode) {
+        const isList = mode === 'list';
+        catalogGrid?.classList.toggle('is-list', isList);
+        btnViewGrid?.classList.toggle('is-active', !isList);
+        btnViewList?.classList.toggle('is-active', isList);
+        btnViewGrid?.setAttribute('aria-pressed', isList ? 'false' : 'true');
+        btnViewList?.setAttribute('aria-pressed', isList ? 'true' : 'false');
+    }
+    btnViewGrid?.addEventListener('click', () => setCatalogView('grid'));
+    btnViewList?.addEventListener('click', () => setCatalogView('list'));
 
     /* Filter Peminjaman saya vs Semua anggota */
     const scopeTabs = $$('.scope-tab[data-loan-scope]');
@@ -238,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
         openRent(detailBookId);
     });
 
-    /* ---------- 6. Modal sewa (wajib akun login) ---------- */
+    /* ---------- 6. Modal sewa (berbasis akun login) ---------- */
     const rentModal = $('#rentModal');
     const rentForm = $('#rentForm');
     const rentMemberInput = $('#rentMember');

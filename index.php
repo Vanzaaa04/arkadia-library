@@ -258,7 +258,7 @@ function renderCover(MediaItem $book, string $extraClass = ''): string
 {
     return sprintf(
         '<div class="cover cover--%s %s" aria-hidden="true">'
-        . '<span class="cover__shine"></span><span class="cover__ring"></span>'
+        . '<span class="cover__motif"></span><span class="cover__rule"></span>'
         . '<span class="cover__badge">%s</span>'
         . '<span class="cover__title">%s</span>'
         . '<span class="cover__author">%s</span>'
@@ -291,7 +291,8 @@ function renderBookCard(MediaItem $book): string
             <h3 class="book-card__title">
                 <button type="button" data-open-book="<?= e($book->getId()) ?>"><?= e($book->getTitle()) ?></button>
             </h3>
-            <p class="book-card__author"><?= e(shortAuthor($book->getAuthor())) ?></p>
+            <p class="book-card__author"><?= e(shortAuthor($book->getAuthor())) ?> &middot; <?= $book->getPages() ?> hlm</p>
+            <p class="book-card__synopsis"><?= e($book->getSynopsis()) ?></p>
             <div class="book-card__footer">
                 <p class="price"><strong><?= formatRupiah($book->getDailyRate()) ?></strong><span>/hari</span></p>
                 <button type="button" class="btn btn--primary btn--sm" data-rent-book="<?= e($book->getId()) ?>" <?= $available ? '' : 'disabled' ?>>
@@ -333,10 +334,10 @@ $myHistoryLoans = $currentUser !== null
     ? array_values(array_filter($historyLoans, fn($t) => $t->getMemberId() === $currentUser->getId()))
     : [];
 
-$featuredBooks = array_slice($ebooks, 0, 4);
+$featuredBooks = array_slice($ebooks, 0, 5);
 $heroBooks = array_slice($ebooks, 0, 3);
 
-// 1 contoh akun per jenis user untuk 1-klik tombol demo pada modal Masuk
+// 1 contoh akun per jenis user untuk tombol demo 1-klik pada modal Masuk
 $demoAccounts = [];
 foreach (['regular', 'premium', 'faculty'] as $tierCode) {
     foreach ($members as $m) {
@@ -347,7 +348,6 @@ foreach (['regular', 'premium', 'faculty'] as $tierCode) {
     }
 }
 
-// Contoh objek tiap subclass User untuk tabel perbandingan keanggotaan (polimorfisme)
 $tierSamples = [];
 foreach (['regular', 'premium', 'faculty'] as $i => $tierCode) {
     $tierSamples[] = User::fromArray([
@@ -375,8 +375,8 @@ function navClass(string $tab, string $name): string
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Arkadia — aplikasi sewa e-book digital untuk mahasiswa dan dosen.">
-    <title>Arkadia — Sewa E-Book Digital</title>
+    <meta name="description" content="Arkadia — Platform penyewaan e-book digital kampus dengan pilihan tarif fleksibel per hari.">
+    <title>ARKADIA — Digital E-Book Lending &amp; Storefront</title>
     <script>
         (function () {
             try {
@@ -398,47 +398,40 @@ function navClass(string $tab, string $name): string
         <div class="container topbar__inner">
             <a href="index.php" class="brand" data-page-link="home">
                 <span class="brand__logo" aria-hidden="true">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
                 </span>
                 <span class="brand__text">
-                    <strong>Arkadia</strong>
-                    <small>Sewa E-Book Digital</small>
+                    <strong>ARKADIA</strong>
+                    <small>Digital Library</small>
                 </span>
             </a>
 
             <nav class="nav" aria-label="Menu utama">
                 <button type="button" class="<?= navClass($tab, 'home') ?>" data-page="home">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/></svg>
                     <span>Beranda</span>
                 </button>
                 <button type="button" class="<?= navClass($tab, 'catalog') ?>" data-page="catalog">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
                     <span>Katalog</span>
                 </button>
                 <button type="button" class="<?= navClass($tab, 'loans') ?>" data-page="loans">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                     <span>Peminjaman</span>
                     <?php if ($loanBadgeCount > 0): ?><span class="nav-count"><?= $loanBadgeCount ?></span><?php endif; ?>
                 </button>
                 <button type="button" class="<?= navClass($tab, 'members') ?>" data-page="members">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     <span>Anggota</span>
                 </button>
                 <button type="button" class="<?= navClass($tab, 'manage') ?>" data-page="manage">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
                     <span>Tambah Buku</span>
                 </button>
                 <button type="button" class="<?= navClass($tab, 'system') ?>" data-page="system">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>
                     <span>Info Sistem</span>
                 </button>
             </nav>
 
             <div class="topbar__actions">
                 <?php if ($currentUser === null): ?>
-                    <button type="button" id="btnOpenAuth" class="btn btn--primary btn--sm" data-open-auth="login">
-                        Masuk / Daftar
-                    </button>
+                    <button type="button" class="btn btn--text btn--sm" data-open-auth="login">Masuk</button>
+                    <button type="button" id="btnOpenAuth" class="btn btn--dark btn--sm" data-open-auth="register">Daftar</button>
                 <?php else: ?>
                     <button type="button" class="user-pill" data-open-auth="login" title="Ganti akun anggota">
                         <span class="avatar avatar--xs avatar--<?= e($currentUser->getTierCode()) ?>"><?= e(memberInitials($currentUser->getName())) ?></span>
@@ -450,19 +443,19 @@ function navClass(string $tab, string $name): string
                     <form method="POST" action="index.php" class="inline-form">
                         <input type="hidden" name="action" value="logout">
                         <button type="submit" class="icon-btn logout-btn" aria-label="Keluar dari akun" title="Keluar dari akun">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
                         </button>
                     </form>
                 <?php endif; ?>
 
                 <button type="button" id="btnTheme" class="icon-btn" aria-label="Ganti tema terang/gelap" title="Ganti tema terang/gelap">
-                    <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                    <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                    <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
                 </button>
                 <form method="POST" action="index.php" class="inline-form" onsubmit="return confirm('Kembalikan semua data ke contoh awal?');">
                     <input type="hidden" name="action" value="reset_demo">
                     <button type="submit" class="icon-btn" aria-label="Kembalikan data contoh" title="Kembalikan data ke contoh awal">
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                     </button>
                 </form>
             </div>
@@ -473,7 +466,13 @@ function navClass(string $tab, string $name): string
     <div id="toastStack" class="toast-stack" aria-live="polite">
         <?php if ($flash !== null): ?>
             <div class="toast toast--<?= e((string) $flash['type']) ?>" role="status">
-                <span class="toast__icon" aria-hidden="true"><?= $flash['type'] === 'error' ? '!' : '✓' ?></span>
+                <span class="toast__icon" aria-hidden="true">
+                    <?php if ($flash['type'] === 'error'): ?>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    <?php else: ?>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <?php endif; ?>
+                </span>
                 <div class="toast__body">
                     <strong><?= e((string) $flash['title']) ?></strong>
                     <p><?= e((string) $flash['message']) ?></p>
@@ -483,132 +482,157 @@ function navClass(string $tab, string $name): string
         <?php endif; ?>
     </div>
 
-    <main class="container main">
+    <main class="main">
 
         <!-- ===================== HALAMAN: BERANDA ===================== -->
         <section id="page-home" class="page <?= $tab === 'home' ? 'is-active' : '' ?>" aria-labelledby="homeTitle">
-            <div class="hero">
-                <div class="hero__text">
-                    <?php if ($currentUser !== null): ?>
-                        <span class="eyebrow">Halo, <?= e(firstName($currentUser->getName())) ?> &middot; <?= e($currentUser->getTierLabel()) ?></span>
-                    <?php else: ?>
-                        <span class="eyebrow">Perpustakaan digital kampus</span>
-                    <?php endif; ?>
-                    <h1 id="homeTitle">Sewa e-book favoritmu, <span class="text-gradient">baca tanpa ribet.</span></h1>
-                    <p class="hero__lead">
-                        Tidak perlu beli buku mahal. Daftar sebagai anggota, pilih e-book, tentukan berapa hari ingin membaca,
-                        dan dapatkan diskon otomatis sesuai jenis keanggotaanmu.
-                    </p>
-                    <div class="hero__cta">
-                        <button type="button" class="btn btn--primary btn--lg" data-goto="catalog">
-                            Jelajahi Katalog
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-                        </button>
-                        <?php if ($currentUser === null): ?>
-                            <button type="button" class="btn btn--ghost btn--lg" data-open-auth="register">Daftar Anggota</button>
-                            <a href="#cara-pakai" class="btn btn--soft btn--lg">Cara pakai</a>
+            <!-- Full-bleed Espresso Brand Hero -->
+            <div class="hero-banner">
+                <div class="container hero-banner__inner">
+                    <div class="hero-banner__copy">
+                        <?php if ($currentUser !== null): ?>
+                            <span class="hero-eyebrow">Halo, <?= e(firstName($currentUser->getName())) ?> &middot; <?= e($currentUser->getTierLabel()) ?></span>
                         <?php else: ?>
-                            <button type="button" class="btn btn--ghost btn--lg" data-goto="loans">Pinjaman Saya (<?= count($myActiveLoans) ?>)</button>
+                            <span class="hero-eyebrow">Pilihan Editor &middot; Perpustakaan Digital Kampus</span>
                         <?php endif; ?>
+                        <h1 id="homeTitle">Baca lebih banyak, <span class="hero-accent">bayar sesuai hari.</span></h1>
+                        <p class="hero-lead">
+                            Sewa buku teknologi, desain, dan riset akademik per hari tanpa harus membeli penuh.
+                            Diskon hingga 30% aktif otomatis untuk Anggota Premium dan Dosen.
+                        </p>
+                        <div class="hero-cta">
+                            <button type="button" class="btn btn--primary btn--lg" data-goto="catalog">
+                                Jelajahi Katalog
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                            </button>
+                            <?php if ($currentUser === null): ?>
+                                <button type="button" class="btn btn--outline-light btn--lg" data-open-auth="register">Daftar Anggota</button>
+                            <?php else: ?>
+                                <button type="button" class="btn btn--outline-light btn--lg" data-goto="loans">Pinjaman Saya (<?= count($myActiveLoans) ?>)</button>
+                            <?php endif; ?>
+                        </div>
+                        <dl class="hero-metrics">
+                            <div><dt>Koleksi Kurasi</dt><dd><?= (int) $metrics['total_titles'] ?> Judul</dd></div>
+                            <div><dt>Anggota Aktif</dt><dd><?= (int) $metrics['total_members'] ?> Akun</dd></div>
+                            <div><dt>Sedang Dipinjam</dt><dd><?= (int) $metrics['active_loans'] ?> Buku</dd></div>
+                        </dl>
                     </div>
-                    <dl class="hero__stats">
-                        <div><dt>Judul e-book</dt><dd><?= (int) $metrics['total_titles'] ?></dd></div>
-                        <div><dt>Anggota</dt><dd><?= (int) $metrics['total_members'] ?></dd></div>
-                        <div><dt>Sedang dipinjam</dt><dd><?= (int) $metrics['active_loans'] ?></dd></div>
-                    </dl>
-                </div>
-                <div class="hero__art" aria-hidden="true">
-                    <div class="hero__blob"></div>
-                    <?php foreach ($heroBooks as $i => $hb): ?>
-                        <div class="hero__book hero__book--<?= $i + 1 ?>"><?= renderCover($hb, 'cover--hero') ?></div>
-                    <?php endforeach; ?>
-                    <div class="hero__float">
-                        <span class="hero__float-icon">✓</span>
-                        <div><strong>Diskon hingga 30%</strong><small>untuk Premium &amp; Dosen</small></div>
+
+                    <div class="hero-showcase" aria-hidden="true">
+                        <?php foreach ($heroBooks as $i => $hb): ?>
+                            <div class="hero-showcase__item hero-showcase__item--<?= $i + 1 ?>">
+                                <?= renderCover($hb, 'cover--hero') ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
 
-            <!-- Cara pakai -->
-            <section id="cara-pakai" class="block" aria-labelledby="howTitle">
-                <div class="block__head">
-                    <h2 id="howTitle">Cara pakai dalam 3 langkah</h2>
-                    <p>Buka katalog bebas kapan saja, lalu masuk atau daftar saat ingin menyewa.</p>
+            <!-- Horizontal Quick-Browse Category Strip -->
+            <div class="cat-strip">
+                <div class="container cat-strip__inner">
+                    <span class="cat-strip__label">Kategori:</span>
+                    <button type="button" class="cat-pill" data-jump-category="all">Semua Koleksi</button>
+                    <?php foreach ($categories as $cat): ?>
+                        <button type="button" class="cat-pill" data-jump-category="<?= e($cat) ?>"><?= e($cat) ?></button>
+                    <?php endforeach; ?>
                 </div>
-                <ol class="steps">
-                    <li class="step">
-                        <span class="step__num">1</span>
-                        <h3>Daftar atau Masuk</h3>
-                        <p>Pilih tipe <strong>Reguler</strong>, <strong>Premium</strong>, atau <strong>Dosen</strong> (atau coba 1 klik akun demo).</p>
-                    </li>
-                    <li class="step">
-                        <span class="step__num">2</span>
-                        <h3>Pilih &amp; Sewa Buku</h3>
-                        <p>Cari e-book di <strong>Katalog</strong>, klik <strong>Sewa</strong>, lalu pilih durasi hari. Diskon akunmu langsung terhitung.</p>
-                    </li>
-                    <li class="step">
-                        <span class="step__num">3</span>
-                        <h3>Baca &amp; Kembalikan</h3>
-                        <p>Pantau tanggal jatuh tempo di menu <strong>Peminjaman</strong> dan klik <strong>Kembalikan</strong> saat selesai.</p>
-                    </li>
-                </ol>
-            </section>
+            </div>
 
-            <!-- Buku pilihan -->
-            <section class="block" aria-labelledby="featuredTitle">
-                <div class="block__head block__head--row">
-                    <div>
-                        <h2 id="featuredTitle">Koleksi pilihan</h2>
-                        <p>E-book yang paling sering disewa minggu ini.</p>
+            <div class="container home-body">
+                <!-- Koleksi Pilihan -->
+                <section class="section-block" aria-labelledby="featuredTitle">
+                    <div class="section-head section-head--row">
+                        <div>
+                            <h2 id="featuredTitle">Koleksi Pilihan Minggu Ini</h2>
+                            <p>Judul terkurasi yang paling banyak dibaca oleh mahasiswa dan dosen.</p>
+                        </div>
+                        <button type="button" class="link-btn" data-goto="catalog">Lihat semua <?= count($ebooks) ?> buku &rarr;</button>
                     </div>
-                    <button type="button" class="link-btn" data-goto="catalog">Lihat semua &rarr;</button>
-                </div>
-                <div class="book-grid">
-                    <?php foreach ($featuredBooks as $fb): ?>
-                        <?= renderBookCard($fb) ?>
-                    <?php endforeach; ?>
-                </div>
-            </section>
+                    <div class="book-grid">
+                        <?php foreach ($featuredBooks as $fb): ?>
+                            <?= renderBookCard($fb) ?>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
 
-            <!-- Jenis keanggotaan -->
-            <section class="block" aria-labelledby="tierTitle">
-                <div class="block__head">
-                    <h2 id="tierTitle">Jenis keanggotaan</h2>
-                    <p>Setiap jenis anggota punya diskon, batas hari, dan kuota buku yang berbeda.</p>
-                </div>
-                <div class="tier-grid">
-                    <?php foreach ($tierSamples as $sample): ?>
-                        <article class="tier-card tier-card--<?= e($sample->getTierCode()) ?>">
-                            <span class="tier-card__label"><?= e($sample->getTierLabel()) ?></span>
-                            <p class="tier-card__big">
-                                <?php if ($sample->getDiscountRate() > 0): ?>
-                                    Diskon <?= (int) round($sample->getDiscountRate() * 100) ?>%
-                                <?php else: ?>
-                                    Harga normal
+                <!-- Cara Pakai Editorial Hairline Steps -->
+                <section id="cara-pakai" class="section-block" aria-labelledby="howTitle">
+                    <div class="section-head">
+                        <h2 id="howTitle">Mulai Membaca dalam 3 Langkah</h2>
+                        <p>Jelajah katalog secara bebas, lalu masuk atau daftar saat ingin menyewa.</p>
+                    </div>
+                    <ol class="steps-editorial">
+                        <li>
+                            <span class="step-num">01</span>
+                            <h3>Daftar atau Masuk</h3>
+                            <p>Pilih tipe <strong>Anggota Reguler</strong>, <strong>Premium</strong>, atau <strong>Dosen</strong>—atau gunakan tombol 1-klik akun demo.</p>
+                        </li>
+                        <li>
+                            <span class="step-num">02</span>
+                            <h3>Pilih Buku &amp; Durasi</h3>
+                            <p>Klik <strong>Sewa</strong> di buku mana pun dan tentukan lama sewa. Potongan biaya langsung dihitung oleh sistem.</p>
+                        </li>
+                        <li>
+                            <span class="step-num">03</span>
+                            <h3>Baca &amp; Kembalikan</h3>
+                            <p>Pantau masa pinjaman di menu <strong>Peminjaman</strong> dan klik <strong>Kembalikan</strong> kapan saja saat selesai.</p>
+                        </li>
+                    </ol>
+                </section>
+
+                <!-- Paket Keanggotaan -->
+                <section class="section-block" aria-labelledby="tierTitle">
+                    <div class="section-head">
+                        <h2 id="tierTitle">Paket Keanggotaan</h2>
+                        <p>Hak diskon, batas durasi, dan kuota pinjaman mengikuti tipe akun Anda.</p>
+                    </div>
+                    <div class="tier-grid">
+                        <?php foreach ($tierSamples as $sample): ?>
+                            <?php $isPopular = $sample->getTierCode() === 'premium'; ?>
+                            <article class="tier-card tier-card--<?= e($sample->getTierCode()) ?>">
+                                <div class="tier-card__top">
+                                    <span class="tier-card__label"><?= e($sample->getTierLabel()) ?></span>
+                                    <?php if ($isPopular): ?><span class="tier-badge">Paling Populer</span><?php endif; ?>
+                                </div>
+                                <p class="tier-card__big">
+                                    <?php if ($sample->getDiscountRate() > 0): ?>
+                                        Diskon <?= (int) round($sample->getDiscountRate() * 100) ?>%
+                                    <?php else: ?>
+                                        Tarif Standar
+                                    <?php endif; ?>
+                                </p>
+                                <ul class="tier-card__list">
+                                    <li>Maksimal sewa <strong><?= $sample->getMaxBorrowDays() ?> hari</strong> per judul</li>
+                                    <li>Pinjam hingga <strong><?= $sample->getMaxConcurrentLoans() ?> buku</strong> bersamaan</li>
+                                    <li><?= $sample->waivesServiceFee() ? '<strong>Gratis</strong> biaya layanan setiap transaksi' : 'Biaya layanan standar berlaku' ?></li>
+                                </ul>
+                                <?php if ($currentUser === null): ?>
+                                    <button type="button"
+                                            class="btn <?= $isPopular ? 'btn--primary' : 'btn--ghost' ?> btn--full"
+                                            data-open-auth="register"
+                                            data-preselect-tier="<?= e($sample->getTierCode()) ?>">
+                                        Daftar <?= e($sample->getTierLabel()) ?>
+                                    </button>
                                 <?php endif; ?>
-                            </p>
-                            <ul class="tier-card__list">
-                                <li>Maksimal sewa <strong><?= $sample->getMaxBorrowDays() ?> hari</strong></li>
-                                <li>Pinjam hingga <strong><?= $sample->getMaxConcurrentLoans() ?> buku</strong> sekaligus</li>
-                                <li><?= $sample->waivesServiceFee() ? '<strong>Gratis</strong> biaya layanan' : 'Biaya layanan berlaku' ?></li>
-                            </ul>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
-            </section>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            </div>
         </section>
 
         <!-- ===================== HALAMAN: KATALOG ===================== -->
-        <section id="page-catalog" class="page <?= $tab === 'catalog' ? 'is-active' : '' ?>" aria-labelledby="catalogTitle">
+        <section id="page-catalog" class="page container page-shell <?= $tab === 'catalog' ? 'is-active' : '' ?>" aria-labelledby="catalogTitle">
             <div class="page-head">
                 <div>
                     <h1 id="catalogTitle">Katalog E-Book</h1>
-                    <p>Menampilkan <strong id="catalogCount"><?= count($ebooks) ?></strong> dari <?= count($ebooks) ?> buku.</p>
+                    <p>Menampilkan <strong id="catalogCount"><?= count($ebooks) ?></strong> dari <?= count($ebooks) ?> judul tersedia.</p>
                 </div>
                 <?php if ($currentUser !== null): ?>
                     <div class="account-chip-inline">
                         <span class="avatar avatar--xs avatar--<?= e($currentUser->getTierCode()) ?>"><?= e(memberInitials($currentUser->getName())) ?></span>
-                        <span>Menyewa sebagai <strong><?= e($currentUser->getName()) ?></strong> (<?= e($currentUser->getTierLabel()) ?>)</span>
+                        <span>Menyewa sebagai <strong><?= e($currentUser->getName()) ?></strong> &middot; <?= e($currentUser->getTierLabel()) ?></span>
                         <button type="button" class="link-btn" data-open-auth="login">Ganti</button>
                     </div>
                 <?php else: ?>
@@ -620,7 +644,7 @@ function navClass(string $tab, string $name): string
 
             <div class="toolbar" role="search">
                 <label class="search">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                     <span class="sr-only">Cari buku</span>
                     <input type="search" id="searchInput" placeholder="Cari judul, penulis, atau kategori..." autocomplete="off">
                 </label>
@@ -633,8 +657,16 @@ function navClass(string $tab, string $name): string
                 <label class="switch">
                     <input type="checkbox" id="availableOnly">
                     <span class="switch__track"><span class="switch__thumb"></span></span>
-                    <span>Hanya yang tersedia</span>
+                    <span>Tersedia saja</span>
                 </label>
+                <div class="view-toggle" role="group" aria-label="Tampilan katalog">
+                    <button type="button" id="btnViewGrid" class="view-btn is-active" aria-pressed="true" title="Tampilan Grid">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    </button>
+                    <button type="button" id="btnViewList" class="view-btn" aria-pressed="false" title="Tampilan Daftar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+                    </button>
+                </div>
             </div>
 
             <div class="chips" role="group" aria-label="Filter kategori">
@@ -651,15 +683,17 @@ function navClass(string $tab, string $name): string
             </div>
 
             <div id="catalogEmpty" class="empty" hidden>
-                <div class="empty__icon" aria-hidden="true">🔍</div>
+                <div class="empty__icon" aria-hidden="true">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </div>
                 <h3>Buku tidak ditemukan</h3>
-                <p>Coba kata kunci lain atau hapus filter.</p>
+                <p>Coba kata kunci lain atau hapus filter pencarian.</p>
                 <button type="button" id="btnResetFilter" class="btn btn--ghost">Hapus semua filter</button>
             </div>
         </section>
 
         <!-- ===================== HALAMAN: PEMINJAMAN ===================== -->
-        <section id="page-loans" class="page <?= $tab === 'loans' ? 'is-active' : '' ?>" aria-labelledby="loansTitle">
+        <section id="page-loans" class="page container page-shell <?= $tab === 'loans' ? 'is-active' : '' ?>" aria-labelledby="loansTitle">
             <div class="page-head">
                 <div>
                     <h1 id="loansTitle">Peminjaman</h1>
@@ -695,7 +729,9 @@ function navClass(string $tab, string $name): string
             <h2 class="section-label">Sedang dipinjam</h2>
             <?php if (count($activeLoans) === 0): ?>
                 <div class="empty">
-                    <div class="empty__icon" aria-hidden="true">📚</div>
+                    <div class="empty__icon" aria-hidden="true">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                    </div>
                     <h3>Belum ada peminjaman aktif</h3>
                     <p>Sewa buku pertama dari katalog.</p>
                     <button type="button" class="btn btn--primary" data-goto="catalog">Buka Katalog</button>
@@ -718,7 +754,7 @@ function navClass(string $tab, string $name): string
                                 <h3><?= e($loan->getEbookTitle()) ?></h3>
                                 <p class="loan-card__who">
                                     <span class="avatar avatar--xs"><?= e(memberInitials($loan->getMemberName())) ?></span>
-                                    <?= e($loan->getMemberName()) ?> <span class="muted">· <?= e($loan->getMemberTier()) ?></span>
+                                    <?= e($loan->getMemberName()) ?> <span class="muted">&middot; <?= e($loan->getMemberTier()) ?></span>
                                 </p>
                                 <ul class="loan-card__meta">
                                     <li>Mulai <strong><?= formatTanggal($loan->getBorrowDate()) ?></strong></li>
@@ -739,7 +775,9 @@ function navClass(string $tab, string $name): string
                     <?php endforeach; ?>
                 </div>
                 <div id="emptyMyLoans" class="empty" <?= ($currentUser !== null && count($myActiveLoans) === 0) ? '' : 'hidden' ?>>
-                    <div class="empty__icon" aria-hidden="true">📖</div>
+                    <div class="empty__icon" aria-hidden="true">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
+                    </div>
                     <h3>Anda belum menyewa buku</h3>
                     <p>Pilih e-book dari katalog untuk mulai membaca dengan diskon akun Anda.</p>
                     <button type="button" class="btn btn--primary" data-goto="catalog">Buka Katalog</button>
@@ -785,11 +823,11 @@ function navClass(string $tab, string $name): string
         </section>
 
         <!-- ===================== HALAMAN: ANGGOTA ===================== -->
-        <section id="page-members" class="page <?= $tab === 'members' ? 'is-active' : '' ?>" aria-labelledby="membersTitle">
+        <section id="page-members" class="page container page-shell <?= $tab === 'members' ? 'is-active' : '' ?>" aria-labelledby="membersTitle">
             <div class="page-head">
                 <div>
                     <h1 id="membersTitle">Anggota</h1>
-                    <p>Daftar anggota terdaftar. Klik <strong>Masuk sebagai akun ini</strong> untuk berpindah akun kapan saja.</p>
+                    <p>Daftar anggota terdaftar. Klik <strong>Masuk akun ini</strong> untuk berpindah akun kapan saja.</p>
                 </div>
                 <a href="#formMember" class="btn btn--primary">+ Daftar anggota baru</a>
             </div>
@@ -866,7 +904,7 @@ function navClass(string $tab, string $name): string
                                         <input type="radio" name="tier" value="<?= e($sample->getTierCode()) ?>" <?= $i === 0 ? 'checked' : '' ?>>
                                         <span>
                                             <strong><?= e($sample->getTierLabel()) ?></strong>
-                                            <small>Diskon <?= (int) round($sample->getDiscountRate() * 100) ?>% · <?= $sample->getMaxBorrowDays() ?> hari</small>
+                                            <small>Diskon <?= (int) round($sample->getDiscountRate() * 100) ?>% &middot; <?= $sample->getMaxBorrowDays() ?> hari</small>
                                         </span>
                                     </label>
                                 <?php endforeach; ?>
@@ -881,7 +919,7 @@ function navClass(string $tab, string $name): string
         </section>
 
         <!-- ===================== HALAMAN: TAMBAH BUKU ===================== -->
-        <section id="page-manage" class="page <?= $tab === 'manage' ? 'is-active' : '' ?>" aria-labelledby="manageTitle">
+        <section id="page-manage" class="page container page-shell <?= $tab === 'manage' ? 'is-active' : '' ?>" aria-labelledby="manageTitle">
             <div class="page-head">
                 <div>
                     <h1 id="manageTitle">Tambah buku baru</h1>
@@ -953,7 +991,7 @@ function navClass(string $tab, string $name): string
                                 <span class="field__label">Warna sampul</span>
                                 <div class="swatches" role="radiogroup" aria-label="Warna sampul">
                                     <?php
-                                    $themes = ['terracotta' => 'Biru', 'indigo' => 'Ungu', 'forest' => 'Hijau', 'amber' => 'Oranye', 'crimson' => 'Merah', 'obsidian' => 'Hitam'];
+                                    $themes = ['terracotta' => 'Merlot', 'indigo' => 'Biru Tua', 'forest' => 'Hijau Pinus', 'amber' => 'Kuning Emas', 'crimson' => 'Merah Bata', 'obsidian' => 'Espresso'];
                                     $first = true;
                                     foreach ($themes as $val => $label): ?>
                                         <label class="swatch" title="<?= e($label) ?>">
@@ -979,19 +1017,19 @@ function navClass(string $tab, string $name): string
                 <aside class="preview-card" aria-label="Pratinjau sampul">
                     <span class="preview-card__label">Pratinjau</span>
                     <div id="previewCover" class="cover cover--terracotta cover--preview">
-                        <span class="cover__shine"></span><span class="cover__ring"></span>
+                        <span class="cover__motif"></span><span class="cover__rule"></span>
                         <span class="cover__badge" id="previewBadge">Umum</span>
                         <span class="cover__title" id="previewTitle">Judul buku kamu</span>
                         <span class="cover__author" id="previewAuthor">Nama penulis</span>
                     </div>
                     <p class="preview-card__price"><strong id="previewPrice">Rp 5.000</strong> / hari</p>
-                    <p class="muted small">Begini tampilan buku di katalog.</p>
+                    <p class="muted small">Tampilan sampul di katalog.</p>
                 </aside>
             </div>
         </section>
 
         <!-- ===================== HALAMAN: INFO SISTEM (UNTUK PENILAIAN) ===================== -->
-        <section id="page-system" class="page <?= $tab === 'system' ? 'is-active' : '' ?>" aria-labelledby="systemTitle">
+        <section id="page-system" class="page container page-shell <?= $tab === 'system' ? 'is-active' : '' ?>" aria-labelledby="systemTitle">
             <div class="page-head">
                 <div>
                     <h1 id="systemTitle">Info Sistem</h1>
@@ -1005,7 +1043,7 @@ function navClass(string $tab, string $name): string
                     <ul class="checklist">
                         <li>Elemen semantik HTML5: <code>header</code>, <code>nav</code>, <code>main</code>, <code>section</code>, <code>article</code>, <code>aside</code>, <code>dialog</code>, <code>footer</code></li>
                         <li>Validasi form di JavaScript (masuk, daftar, buku) + validasi ulang di PHP</li>
-                        <li>Layout responsif (CSS Grid/Flexbox) dengan tema terang &amp; gelap</li>
+                        <li>Layout responsif (CSS Grid/Flexbox) dengan tema terang &amp; gelap serta tampilan Grid/Daftar</li>
                         <li>Interaktif: pencarian live, filter, auth &amp; sewa modal, kalkulasi via <code>fetch()</code></li>
                     </ul>
                 </article>
@@ -1014,7 +1052,7 @@ function navClass(string $tab, string $name): string
                     <ul class="checklist">
                         <li><b>Class &amp; Object:</b> 14 class/interface di <code>src/</code> (termasuk <code>AuthService</code>)</li>
                         <li><b>Encapsulation:</b> properti <code>private</code> + getter/setter bervalidasi</li>
-                        <li><b>Inheritance:</b> <code>MediaItem</code> → 3 jenis buku, <code>User</code> → 3 jenis anggota</li>
+                        <li><b>Inheritance:</b> <code>MediaItem</code> &rarr; 3 jenis buku, <code>User</code> &rarr; 3 jenis anggota</li>
                         <li><b>Polymorphism:</b> <code>calculateBaseRentalCost()</code>, <code>getDiscountRate()</code>, dll. berbeda per subclass</li>
                         <li><b>Namespace:</b> <code>App\Contracts</code>, <code>App\Models</code>, <code>App\Services</code></li>
                     </ul>
@@ -1030,7 +1068,7 @@ function navClass(string $tab, string $name): string
                 </article>
             </div>
 
-            <div class="block__head">
+            <div class="section-head">
                 <h2>Contoh polimorfisme di aplikasi</h2>
                 <p>Satu method yang sama menghasilkan perilaku berbeda tergantung objeknya.</p>
             </div>
@@ -1052,7 +1090,7 @@ function navClass(string $tab, string $name): string
                 </table>
             </div>
 
-            <div class="block__head">
+            <div class="section-head">
                 <h2>Struktur class (dibaca langsung dengan Reflection API)</h2>
                 <p>Daftar ini dibuat otomatis oleh <code>OopInspectorService</code> saat halaman dibuka.</p>
             </div>
@@ -1096,7 +1134,7 @@ function navClass(string $tab, string $name): string
             <button type="button" class="modal__close" data-close-modal aria-label="Tutup">&times;</button>
             <div class="book-detail">
                 <div id="bmCover" class="cover cover--lg">
-                    <span class="cover__shine"></span><span class="cover__ring"></span>
+                    <span class="cover__motif"></span><span class="cover__rule"></span>
                     <span class="cover__badge"></span><span class="cover__title"></span><span class="cover__author"></span>
                 </div>
                 <div class="book-detail__info">
@@ -1131,7 +1169,7 @@ function navClass(string $tab, string $name): string
 
             <div class="rent-head">
                 <div id="rmCover" class="cover cover--sm">
-                    <span class="cover__shine"></span><span class="cover__ring"></span>
+                    <span class="cover__motif"></span><span class="cover__rule"></span>
                     <span class="cover__badge"></span><span class="cover__title"></span><span class="cover__author"></span>
                 </div>
                 <div>
@@ -1166,7 +1204,7 @@ function navClass(string $tab, string $name): string
                     <div class="day-custom">
                         <label for="rentDays" class="small muted">atau ketik jumlah hari:</label>
                         <div class="stepper">
-                            <button type="button" id="dayMinus" aria-label="Kurangi hari">−</button>
+                            <button type="button" id="dayMinus" aria-label="Kurangi hari">&minus;</button>
                             <input type="number" id="rentDays" name="duration_days" value="3" min="1" max="30">
                             <button type="button" id="dayPlus" aria-label="Tambah hari">+</button>
                         </div>
@@ -1179,7 +1217,7 @@ function navClass(string $tab, string $name): string
                     <div class="bill__row bill__row--discount"><span id="billDiscountLabel">Diskon anggota</span><span id="billDiscount">-</span></div>
                     <div class="bill__row bill__row--muted"><span>Jatuh tempo</span><span id="billDue">-</span></div>
                     <div class="bill__total"><span>Total bayar</span><strong id="billTotal">-</strong></div>
-                    <p class="bill__note">Dihitung server PHP · <code id="billTrace">User × MediaItem</code></p>
+                    <p class="bill__note">Dihitung server PHP &middot; <code id="billTrace">User &times; MediaItem</code></p>
                 </div>
 
                 <div id="rentAlert" class="alert" hidden></div>
@@ -1273,7 +1311,7 @@ function navClass(string $tab, string $name): string
                                     <input type="radio" name="tier" value="<?= e($sample->getTierCode()) ?>" <?= $i === 1 ? 'checked' : '' ?>>
                                     <span>
                                         <strong><?= e($sample->getTierLabel()) ?></strong>
-                                        <small>Diskon <?= (int) round($sample->getDiscountRate() * 100) ?>% · maks <?= $sample->getMaxBorrowDays() ?> hari</small>
+                                        <small>Diskon <?= (int) round($sample->getDiscountRate() * 100) ?>% &middot; maks <?= $sample->getMaxBorrowDays() ?> hari</small>
                                     </span>
                                 </label>
                             <?php endforeach; ?>
@@ -1287,8 +1325,8 @@ function navClass(string $tab, string $name): string
 
     <footer class="footer">
         <div class="container footer__inner">
-            <p><strong>Arkadia</strong> · Prototipe UTS Pemrograman Web Ganjil 2026/2027 · Informatika UMM</p>
-            <p class="muted small">HTML5 · CSS3 · JavaScript · PHP <?= e(PHP_VERSION) ?> OOP · Data JSON &amp; XML</p>
+            <p><strong>ARKADIA</strong> &middot; Prototipe UTS Pemrograman Web Ganjil 2026/2027 &middot; Informatika UMM</p>
+            <p class="muted small">HTML5 &middot; CSS3 &middot; JavaScript &middot; PHP <?= e(PHP_VERSION) ?> OOP &middot; Data JSON &amp; XML</p>
         </div>
     </footer>
 
