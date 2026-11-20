@@ -17,7 +17,7 @@ class FacultyMember extends User
 
     public function getTierLabel(): string
     {
-        return 'Academic Scholar';
+        return 'Dosen & Peneliti';
     }
 
     public function getDiscountRate(): float

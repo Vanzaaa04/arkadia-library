@@ -68,7 +68,7 @@ class AcademicMonograph extends MediaItem
 
     public function getMediaTypeLabel(): string
     {
-        return 'Academic Monograph';
+        return 'E-Book Akademik';
     }
 
     /**

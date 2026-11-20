@@ -17,7 +17,7 @@ class RegularMember extends User
 
     public function getTierLabel(): string
     {
-        return 'Regular Reader';
+        return 'Anggota Reguler';
     }
 
     public function getDiscountRate(): float

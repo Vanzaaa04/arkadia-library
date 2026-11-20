@@ -68,7 +68,7 @@ class InteractiveMediaBook extends MediaItem
 
     public function getMediaTypeLabel(): string
     {
-        return 'Interactive Suite & Audio';
+        return 'E-Book Interaktif';
     }
 
     /**

@@ -17,7 +17,7 @@ class PremiumMember extends User
 
     public function getTierLabel(): string
     {
-        return 'Arkadia Fellow (VIP)';
+        return 'Anggota Premium';
     }
 
     public function getDiscountRate(): float

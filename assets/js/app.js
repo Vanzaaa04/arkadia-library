@@ -1,436 +1,403 @@
 /**
- * ARKADIA — Front-End Interactivity, Dual-Theme Switcher, Polymorphic Rental Calculator
- * & Client-Side Form Validation (Vanilla ES6 JavaScript)
+ * ARKADIA — Interaksi halaman (Vanilla JavaScript, tanpa framework)
+ *  1. Tema terang/gelap
+ *  2. Navigasi antar halaman (tanpa reload)
+ *  3. Pencarian & filter katalog
+ *  4. Modal detail buku
+ *  5. Modal sewa + kalkulasi biaya real-time via fetch() ke PHP
+ *  6. Pratinjau sampul saat menambah buku
+ *  7. Validasi form di sisi klien
+ *  8. Notifikasi (toast)
  */
 document.addEventListener('DOMContentLoaded', () => {
     const state = window.ARKADIA_STATE || { catalog: [], members: [] };
+    const $ = (sel, root = document) => root.querySelector(sel);
+    const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+    const rupiah = (n) => 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
+    const findBook = (id) => state.catalog.find((b) => b.id === id);
+    const findMember = (id) => state.members.find((m) => m.id === id);
+    const typeShort = (code) => ({ academic: 'Akademik', interactive: 'Interaktif' }[code] || 'Umum');
+    const shortAuthor = (a) => String(a).split(/\s*(?:&|,)\s*/)[0];
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const formatTanggal = (iso) => {
+        const d = new Date(iso + 'T00:00:00');
+        return isNaN(d) ? iso : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    };
 
-    // --- 0. DARK / LIGHT THEME SWITCHER ---
-    const btnThemeToggle = document.getElementById('btnThemeToggle');
-    if (btnThemeToggle) {
-        btnThemeToggle.addEventListener('click', () => {
-            const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-            const next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            try {
-                localStorage.setItem('arkadia-theme', next);
-            } catch (e) {}
-        });
+    /* ---------- 8. Toast ---------- */
+    const toastStack = $('#toastStack');
+    function dismissToast(el) {
+        if (!el || el.classList.contains('is-leaving')) return;
+        el.classList.add('is-leaving');
+        setTimeout(() => el.remove(), 260);
     }
-
-    // --- 1. TAB NAVIGATION ---
-    const tabButtons = document.querySelectorAll('.nav-tab[data-tab-target]');
-    const tabPanels = document.querySelectorAll('.tab-panel');
-
-    function activateTab(targetId) {
-        tabButtons.forEach((btn) => {
-            const isMatch = btn.getAttribute('data-tab-target') === targetId;
-            btn.classList.toggle('is-active', isMatch);
-            btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
-        });
-
-        tabPanels.forEach((panel) => {
-            const isMatch = panel.id === `panel-${targetId}`;
-            panel.classList.toggle('is-active', isMatch);
-        });
+    function bindToast(el) {
+        $('.toast__close', el)?.addEventListener('click', () => dismissToast(el));
+        setTimeout(() => dismissToast(el), 6500);
     }
+    function toast(title, message, type = 'info') {
+        const el = document.createElement('div');
+        el.className = `toast toast--${type}`;
+        el.setAttribute('role', 'status');
+        el.innerHTML = `<span class="toast__icon" aria-hidden="true">${type === 'error' ? '!' : '✓'}</span>
+            <div class="toast__body"><strong></strong><p></p></div>
+            <button type="button" class="toast__close" aria-label="Tutup notifikasi">&times;</button>`;
+        $('strong', el).textContent = title;
+        $('p', el).textContent = message;
+        toastStack.appendChild(el);
+        bindToast(el);
+    }
+    $$('.toast', toastStack).forEach(bindToast);
 
-    tabButtons.forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const target = btn.getAttribute('data-tab-target');
-            activateTab(target);
+    /* ---------- 1. Tema ---------- */
+    $('#btnTheme')?.addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('arkadia-theme', next); } catch (e) { /* abaikan */ }
+    });
+
+    /* ---------- 2. Navigasi halaman ---------- */
+    const pages = $$('.page');
+    const navLinks = $$('.nav-link[data-page]');
+    function showPage(name) {
+        if (!$(`#page-${name}`)) return;
+        pages.forEach((p) => p.classList.toggle('is-active', p.id === `page-${name}`));
+        navLinks.forEach((b) => {
+            const active = b.dataset.page === name;
+            b.classList.toggle('is-active', active);
+            if (active) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+        });
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', name);
+        history.replaceState(null, '', url);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    $$('[data-page], [data-goto]').forEach((el) => {
+        el.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            showPage(el.dataset.page || el.dataset.goto);
         });
     });
 
-    // --- 2. LIVE SEARCH & FILTER KATALOG ---
-    const searchInput = document.getElementById('catalogSearch');
-    const filterCategory = document.getElementById('filterCategory');
-    const filterMediaType = document.getElementById('filterMediaType');
-    const filterAvailability = document.getElementById('filterAvailability');
-    const bookCards = document.querySelectorAll('.book-card');
-    const emptyState = document.getElementById('catalogEmptyState');
-    const btnResetFilter = document.getElementById('btnResetFilter');
+    /* ---------- 3. Pencarian & filter katalog ---------- */
+    const searchInput = $('#searchInput');
+    const typeFilter = $('#typeFilter');
+    const availableOnly = $('#availableOnly');
+    const catalogCards = $$('#catalogGrid .book-card');
+    const catalogEmpty = $('#catalogEmpty');
+    const catalogCount = $('#catalogCount');
+    let activeCategory = 'all';
 
-    function applyCatalogFilters() {
-        if (!searchInput) return;
-        const query = searchInput.value.trim().toLowerCase();
-        const cat = filterCategory.value;
-        const type = filterMediaType.value;
-        const avail = filterAvailability.value;
-
-        let visibleCount = 0;
-
-        bookCards.forEach((card) => {
-            const matchQuery = !query || card.dataset.title.includes(query);
-            const matchCat = cat === 'all' || card.dataset.category === cat;
-            const matchType = type === 'all' || card.dataset.type === type;
-            const matchAvail = avail === 'all' || card.dataset.available === '1';
-
-            const isVisible = matchQuery && matchCat && matchType && matchAvail;
-            card.hidden = !isVisible;
-            if (isVisible) visibleCount++;
+    function applyFilters() {
+        const q = searchInput.value.trim().toLowerCase();
+        const type = typeFilter.value;
+        const onlyAvail = availableOnly.checked;
+        let visible = 0;
+        catalogCards.forEach((card) => {
+            const ok = (!q || card.dataset.search.includes(q))
+                && (activeCategory === 'all' || card.dataset.category === activeCategory)
+                && (type === 'all' || card.dataset.type === type)
+                && (!onlyAvail || card.dataset.available === '1');
+            card.hidden = !ok;
+            if (ok) visible++;
         });
-
-        if (emptyState) {
-            emptyState.hidden = visibleCount > 0;
-        }
+        catalogEmpty.hidden = visible > 0;
+        catalogCount.textContent = visible;
     }
 
-    [searchInput, filterCategory, filterMediaType, filterAvailability].forEach((el) => {
-        if (el) {
-            el.addEventListener('input', applyCatalogFilters);
-            el.addEventListener('change', applyCatalogFilters);
-        }
+    searchInput?.addEventListener('input', applyFilters);
+    typeFilter?.addEventListener('change', applyFilters);
+    availableOnly?.addEventListener('change', applyFilters);
+    $$('.chip[data-cat]').forEach((chip) => {
+        chip.addEventListener('click', () => {
+            activeCategory = chip.dataset.cat;
+            $$('.chip[data-cat]').forEach((c) => c.classList.toggle('is-active', c === chip));
+            applyFilters();
+        });
+    });
+    $('#btnResetFilter')?.addEventListener('click', () => {
+        searchInput.value = '';
+        typeFilter.value = 'all';
+        availableOnly.checked = false;
+        activeCategory = 'all';
+        $$('.chip[data-cat]').forEach((c) => c.classList.toggle('is-active', c.dataset.cat === 'all'));
+        applyFilters();
     });
 
-    if (btnResetFilter) {
-        btnResetFilter.addEventListener('click', () => {
-            searchInput.value = '';
-            filterCategory.value = 'all';
-            filterMediaType.value = 'all';
-            filterAvailability.value = 'all';
-            applyCatalogFilters();
+    /* ---------- Helper sampul ---------- */
+    function paintCover(el, book, sizeClass) {
+        el.className = `cover cover--${book.cover_theme} ${sizeClass}`;
+        $('.cover__badge', el).textContent = typeShort(book.media_type);
+        $('.cover__title', el).textContent = book.title;
+        $('.cover__author', el).textContent = shortAuthor(book.author);
+    }
+
+    /* ---------- Modal umum ---------- */
+    $$('dialog.modal').forEach((dlg) => {
+        dlg.addEventListener('click', (ev) => { if (ev.target === dlg) dlg.close(); });
+        $$('[data-close-modal]', dlg).forEach((btn) => btn.addEventListener('click', () => dlg.close()));
+    });
+
+    /* ---------- 4. Modal detail buku ---------- */
+    const bookModal = $('#bookModal');
+    let detailBookId = null;
+    function openBookDetail(id) {
+        const b = findBook(id);
+        if (!b) return;
+        detailBookId = id;
+        paintCover($('#bmCover'), b, 'cover--lg');
+        $('#bmType').textContent = b.media_type_label;
+        $('#bmTitle').textContent = b.title;
+        $('#bmAuthor').textContent = 'oleh ' + b.author;
+        $('#bmSynopsis').textContent = b.synopsis;
+        $('#bmCategory').textContent = b.category;
+        $('#bmYear').textContent = b.publish_year;
+        $('#bmPages').textContent = b.pages + ' halaman';
+        $('#bmFormat').textContent = `${b.file_format} (${b.file_size_mb} MB)`;
+        $('#bmStock').textContent = b.stock > 0 ? `${b.stock} dari ${b.total_stock} tersedia` : 'Sedang habis';
+        $('#bmTech').textContent = b.technical_metadata;
+        $('#bmPrice').textContent = rupiah(b.daily_rate);
+        const rentBtn = $('#bmRentBtn');
+        rentBtn.disabled = b.stock <= 0;
+        rentBtn.textContent = b.stock > 0 ? 'Sewa buku ini' : 'Stok habis';
+        bookModal.showModal();
+    }
+    $$('[data-open-book]').forEach((el) => el.addEventListener('click', () => openBookDetail(el.dataset.openBook)));
+    $('#bmRentBtn')?.addEventListener('click', () => {
+        bookModal.close();
+        openRent(detailBookId);
+    });
+
+    /* ---------- 5. Modal sewa ---------- */
+    const rentModal = $('#rentModal');
+    const rentForm = $('#rentForm');
+    const rentMember = $('#rentMember');
+    const rentDays = $('#rentDays');
+    const rentSubmit = $('#rentSubmit');
+    const rentAlert = $('#rentAlert');
+    const bill = $('#bill');
+    const dayChips = $$('.day-chip');
+    let currentBook = null;
+    let preferredMemberId = null;
+    let quoteTimer = null;
+    let quoteToken = 0;
+
+    const shortClass = (fqcn) => String(fqcn).split('\\').pop();
+
+    function currentDays() {
+        let d = parseInt(rentDays.value, 10);
+        if (isNaN(d) || d < 1) d = 1;
+        if (d > 30) d = 30;
+        return d;
+    }
+
+    function syncDayChips() {
+        const m = findMember(rentMember.value);
+        const d = currentDays();
+        dayChips.forEach((chip) => {
+            const v = parseInt(chip.dataset.days, 10);
+            chip.classList.toggle('is-active', v === d);
+            chip.disabled = m ? v > m.max_borrow_days : false;
         });
     }
 
-    // --- 3. POLYMORPHIC RENTAL SIMULATOR & LIVE RECEIPT ---
-    const simMemberSelect = document.getElementById('simMemberId');
-    const simEbookSelect = document.getElementById('simEbookId');
-    const simDurationSlider = document.getElementById('simDurationSlider');
-    const simDurationInput = document.getElementById('simDurationDays');
-    const simDurationBadge = document.getElementById('simDurationBadge');
-    const simMemberMeta = document.getElementById('simMemberMeta');
-    const simEbookMeta = document.getElementById('simEbookMeta');
-    const simMaxDaysHint = document.getElementById('simMaxDaysHint');
-    const simValidationAlert = document.getElementById('simValidationAlert');
-    const btnSubmitRental = document.getElementById('btnSubmitRental');
-    const durationPresetButtons = document.querySelectorAll('.duration-preset-btn');
-
-    const receiptClassTrace = document.getElementById('receiptClassTrace');
-    const receiptBaseLabel = document.getElementById('receiptBaseLabel');
-    const receiptBaseValue = document.getElementById('receiptBaseValue');
-    const receiptServiceLabel = document.getElementById('receiptServiceLabel');
-    const receiptServiceValue = document.getElementById('receiptServiceValue');
-    const receiptDiscountLabel = document.getElementById('receiptDiscountLabel');
-    const receiptDiscountValue = document.getElementById('receiptDiscountValue');
-    const receiptDueDate = document.getElementById('receiptDueDate');
-    const receiptTotalValue = document.getElementById('receiptTotalValue');
-
-    function formatRupiahJS(amount) {
-        return 'Rp ' + Math.round(amount).toLocaleString('id-ID');
+    function showRentErrors(errors) {
+        if (errors.length) {
+            rentAlert.hidden = false;
+            rentAlert.textContent = errors.join(' ');
+            rentSubmit.disabled = true;
+        } else {
+            rentAlert.hidden = true;
+            rentAlert.textContent = '';
+            rentSubmit.disabled = false;
+        }
     }
 
-    function findMember(id) {
-        return state.members.find((m) => m.id === id) || state.members[0];
-    }
+    function renderQuote(q) {
+        $('#billBaseLabel').textContent = `Biaya sewa (${q.duration_days} hari × ${rupiah(q.daily_rate)})`;
+        $('#billBase').textContent = rupiah(q.base_cost);
 
-    function findBook(id) {
-        return state.catalog.find((b) => b.id === id) || state.catalog[0];
-    }
-
-    function syncDurationPresetChips(days) {
-        durationPresetButtons.forEach((btn) => {
-            const presetDays = parseInt(btn.getAttribute('data-days'), 10);
-            btn.classList.toggle('is-active', presetDays === days);
-        });
-    }
-
-    function updateRentalSimulation() {
-        if (!simMemberSelect || !simEbookSelect) return;
-
-        const member = findMember(simMemberSelect.value);
-        const book = findBook(simEbookSelect.value);
-        let days = parseInt(simDurationInput.value, 10);
-
-        if (isNaN(days) || days < 1) {
-            days = 1;
+        if (q.applied_service_fee === 0 && q.raw_service_fee > 0) {
+            $('#billServiceLabel').textContent = 'Biaya layanan (gratis untuk Premium)';
+            $('#billService').innerHTML = `<span class="strike">${rupiah(q.raw_service_fee)}</span>Rp 0`;
+        } else {
+            $('#billServiceLabel').textContent = 'Biaya layanan';
+            $('#billService').textContent = rupiah(q.applied_service_fee);
         }
 
-        simDurationBadge.textContent = `${days} Hari`;
-        if (document.activeElement !== simDurationSlider) {
-            simDurationSlider.value = Math.min(21, Math.max(1, days));
-        }
-        syncDurationPresetChips(days);
-
-        if (!member || !book) return;
-
-        simMemberMeta.innerHTML = `<strong>${member.tier_label}</strong> • Kuota: ${member.active_loans}/${member.max_concurrent_loans} buku • Maks ${member.max_borrow_days} hari`;
-        simEbookMeta.innerHTML = `<strong>${book.media_type_label}</strong> • Stok: ${book.stock}/${book.total_stock} lisensi`;
-        simMaxDaysHint.textContent = `Maksimal ${member.max_borrow_days} hari untuk ${member.tier_label}`;
-
-        const memberClassMap = {
-            regular: 'RegularMember',
-            premium: 'PremiumMember',
-            faculty: 'FacultyMember'
-        };
-        const bookClassMap = {
-            standard: 'StandardEBook',
-            academic: 'AcademicMonograph',
-            interactive: 'InteractiveMediaBook'
-        };
-        receiptClassTrace.textContent = `${memberClassMap[member.tier] || 'User'} × ${bookClassMap[book.media_type] || 'MediaItem'}`;
-
-        let baseCost = book.daily_rate * days;
-        let baseNote = `${formatRupiahJS(book.daily_rate)} × ${days} hr`;
-
-        if (book.media_type === 'standard' && days >= 7) {
-            baseCost = Math.round(baseCost * 0.95);
-            baseNote += ' (Diskon >=7hr 5%)';
-        } else if (book.media_type === 'academic') {
-            baseCost += 2500;
-            baseNote += ' (+Sitasi DOI Rp 2.500)';
-        } else if (book.media_type === 'interactive') {
-            baseCost = (book.daily_rate + 1000) * days;
-            baseNote = `(${formatRupiahJS(book.daily_rate)} + Lab Rp 1.000) × ${days} hr`;
-        }
-
-        const rawServiceFee = book.service_fee;
-        const appliedServiceFee = member.waives_service_fee ? 0 : rawServiceFee;
-        const discountAmount = Math.round(baseCost * member.discount_rate);
-        const totalCost = Math.max(0, baseCost + appliedServiceFee - discountAmount);
-
-        const due = new Date();
-        due.setDate(due.getDate() + days);
-        const dueStr = due.toISOString().split('T')[0];
-
-        receiptBaseLabel.textContent = `Biaya Pokok (${baseNote})`;
-        receiptBaseValue.textContent = formatRupiahJS(baseCost);
-
-        receiptServiceLabel.textContent = member.waives_service_fee
-            ? 'Biaya Layanan (Gratis VIP)'
-            : `Biaya Layanan (${book.media_type_label})`;
-        receiptServiceValue.textContent = formatRupiahJS(appliedServiceFee);
-
-        const discPct = Math.round(member.discount_rate * 100);
-        receiptDiscountLabel.textContent = `Diskon ${member.tier_label} (${discPct}%)`;
-        receiptDiscountValue.textContent = '-' + formatRupiahJS(discountAmount);
-        receiptDueDate.textContent = dueStr;
-        receiptTotalValue.textContent = formatRupiahJS(totalCost);
+        $('#billDiscountLabel').textContent = q.discount_rate_percent > 0
+            ? `Diskon ${q.member_tier} (${q.discount_rate_percent}%)`
+            : 'Diskon anggota';
+        $('#billDiscount').textContent = q.discount_amount > 0 ? '−' + rupiah(q.discount_amount) : 'Rp 0';
+        $('#billDue').textContent = formatTanggal(q.due_date);
+        $('#billTotal').textContent = rupiah(q.total_cost);
+        $('#billTrace').textContent = `${shortClass(q.member_class)} × ${shortClass(q.ebook_class)}`;
 
         const errors = [];
-        if (book.stock <= 0) {
-            errors.push(`Stok lisensi "${book.title}" sedang habis.`);
-        }
-        if (member.active_loans >= member.max_concurrent_loans) {
-            errors.push(`Kuota pinjaman ${member.name} (${member.max_concurrent_loans} buku) sudah penuh.`);
-        }
-        if (days > member.max_borrow_days) {
-            errors.push(`Durasi ${days} hari melebihi batas ${member.max_borrow_days} hari untuk ${member.tier_label}.`);
-        }
+        if (!q.is_stock_available) errors.push('Stok buku ini sedang habis.');
+        if (!q.is_quota_available) errors.push(`${q.member_name} sudah mencapai batas jumlah pinjaman.`);
+        if (!q.is_duration_valid) errors.push(`Maksimal ${q.max_allowed_days} hari untuk ${q.member_tier}.`);
+        showRentErrors(errors);
+    }
 
-        if (errors.length > 0) {
-            simValidationAlert.hidden = false;
-            simValidationAlert.textContent = errors.join(' ');
-            btnSubmitRental.disabled = true;
-        } else {
-            simValidationAlert.hidden = true;
-            simValidationAlert.textContent = '';
-            btnSubmitRental.disabled = false;
+    async function fetchQuote() {
+        if (!currentBook) return;
+        const m = findMember(rentMember.value);
+        if (!m) return;
+        const days = currentDays();
+        const token = ++quoteToken;
+        bill.classList.add('is-loading');
+        try {
+            const params = new URLSearchParams({ api: 'simulate', member_id: m.id, ebook_id: currentBook.id, days: String(days) });
+            const res = await fetch(`index.php?${params.toString()}`, { headers: { Accept: 'application/json' } });
+            const data = await res.json();
+            if (token !== quoteToken) return;
+            if (!data.ok) throw new Error(data.error || 'Gagal menghitung biaya.');
+            renderQuote(data.quote);
+        } catch (err) {
+            if (token !== quoteToken) return;
+            showRentErrors([err.message]);
+        } finally {
+            if (token === quoteToken) bill.classList.remove('is-loading');
         }
     }
 
-    durationPresetButtons.forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const presetDays = btn.getAttribute('data-days');
-            if (simDurationInput && simDurationSlider && presetDays) {
-                simDurationInput.value = presetDays;
-                simDurationSlider.value = presetDays;
-                updateRentalSimulation();
-            }
-        });
+    function refreshRent() {
+        const m = findMember(rentMember.value);
+        if (m) {
+            $('#rentMemberInfo').textContent = `${m.tier_label} · maks ${m.max_borrow_days} hari · sedang pinjam ${m.active_loans}/${m.max_concurrent_loans} buku`;
+        }
+        syncDayChips();
+        clearTimeout(quoteTimer);
+        quoteTimer = setTimeout(fetchQuote, 120);
+    }
+
+    function openRent(id) {
+        const b = findBook(id);
+        if (!b) return;
+        currentBook = b;
+        $('#rentEbookId').value = b.id;
+        paintCover($('#rmCover'), b, 'cover--sm');
+        $('#rmTitle').textContent = b.title;
+        $('#rmSub').textContent = `${rupiah(b.daily_rate)} / hari · ${b.media_type_label}`;
+
+        if (preferredMemberId && findMember(preferredMemberId)) {
+            rentMember.value = preferredMemberId;
+        }
+        const m = findMember(rentMember.value);
+        rentDays.value = m ? Math.min(3, m.max_borrow_days) : 3;
+        rentSubmit.disabled = true;
+        refreshRent();
+        rentModal.showModal();
+    }
+
+    $$('[data-rent-book]').forEach((btn) => btn.addEventListener('click', () => openRent(btn.dataset.rentBook)));
+    rentMember?.addEventListener('change', refreshRent);
+    rentDays?.addEventListener('input', refreshRent);
+    dayChips.forEach((chip) => chip.addEventListener('click', () => {
+        rentDays.value = chip.dataset.days;
+        refreshRent();
+    }));
+    $('#dayMinus')?.addEventListener('click', () => { rentDays.value = Math.max(1, currentDays() - 1); refreshRent(); });
+    $('#dayPlus')?.addEventListener('click', () => { rentDays.value = Math.min(30, currentDays() + 1); refreshRent(); });
+
+    rentForm?.addEventListener('submit', (ev) => {
+        if (rentSubmit.disabled) {
+            ev.preventDefault();
+            return;
+        }
+        rentDays.value = currentDays();
+        rentSubmit.disabled = true;
+        rentSubmit.textContent = 'Memproses...';
     });
 
-    if (simDurationSlider && simDurationInput) {
-        simDurationSlider.addEventListener('input', () => {
-            simDurationInput.value = simDurationSlider.value;
-            updateRentalSimulation();
-        });
-        simDurationInput.addEventListener('input', updateRentalSimulation);
-    }
-
-    if (simMemberSelect) simMemberSelect.addEventListener('change', updateRentalSimulation);
-    if (simEbookSelect) simEbookSelect.addEventListener('change', updateRentalSimulation);
-
-    updateRentalSimulation();
-
-    // --- 4. TOMBOL "PINJAM" DARI KARTU KATALOG & DIREKTORI MEMBER ---
-    document.querySelectorAll('.btn-select-rent').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const bookId = btn.getAttribute('data-book-id');
-            if (simEbookSelect && bookId) {
-                simEbookSelect.value = bookId;
-                updateRentalSimulation();
-                simEbookSelect.focus();
-                simEbookSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        });
+    /* Tombol "Sewakan buku" di kartu anggota */
+    const rentingFor = $('#rentingFor');
+    $$('[data-rent-for]').forEach((btn) => btn.addEventListener('click', () => {
+        const m = findMember(btn.dataset.rentFor);
+        if (!m) return;
+        preferredMemberId = m.id;
+        rentMember.value = m.id;
+        $('#rentingForName').textContent = m.name;
+        rentingFor.hidden = false;
+        showPage('catalog');
+        toast('Pilih buku', `Klik "Sewa" pada buku yang ingin disewa untuk ${m.name}.`, 'info');
+    }));
+    $('#btnClearRentingFor')?.addEventListener('click', () => {
+        preferredMemberId = null;
+        rentingFor.hidden = true;
     });
 
-    document.querySelectorAll('.btn-pick-member').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const memberId = btn.getAttribute('data-member-id');
-            if (simMemberSelect && memberId) {
-                simMemberSelect.value = memberId;
-                updateRentalSimulation();
-                simMemberSelect.focus();
-            }
-        });
-    });
+    /* ---------- 6. Pratinjau sampul (Tambah Buku) ---------- */
+    const previewCover = $('#previewCover');
+    const ebookTitle = $('#ebookTitle');
+    const ebookAuthor = $('#ebookAuthor');
+    const ebookType = $('#ebookMediaType');
+    const ebookRate = $('#ebookDailyRate');
+    function updatePreview() {
+        if (!previewCover) return;
+        const theme = ($('input[name="cover_theme"]:checked') || {}).value || 'terracotta';
+        previewCover.className = `cover cover--${theme} cover--preview`;
+        $('#previewTitle').textContent = ebookTitle.value.trim() || 'Judul buku kamu';
+        $('#previewAuthor').textContent = ebookAuthor.value.trim() || 'Nama penulis';
+        $('#previewBadge').textContent = typeShort(ebookType.value);
+        $('#previewPrice').textContent = rupiah(ebookRate.value);
+        $('#groupDoi').hidden = ebookType.value !== 'academic';
+        $('#groupAudio').hidden = ebookType.value !== 'interactive';
+    }
+    [ebookTitle, ebookAuthor, ebookType, ebookRate].forEach((el) => el?.addEventListener('input', updatePreview));
+    ebookType?.addEventListener('change', updatePreview);
+    $$('input[name="cover_theme"]').forEach((r) => r.addEventListener('change', updatePreview));
+    updatePreview();
 
-    // --- 5. MODAL DETAIL MONOGRAF / E-BOOK ---
-    const modal = document.getElementById('bookDetailModal');
-    const btnCloseModal = document.getElementById('btnCloseModal');
-    const btnModalSelectBook = document.getElementById('btnModalSelectBook');
-    let currentModalBookId = null;
-
-    document.querySelectorAll('.btn-inspect-book').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const bookId = btn.getAttribute('data-book-id');
-            const book = findBook(bookId);
-            if (!book || !modal) return;
-
-            currentModalBookId = book.id;
-            document.getElementById('modalBookType').textContent = book.media_type_label;
-            document.getElementById('modalBookCategory').textContent = `${book.category} • ${book.publish_year}`;
-            document.getElementById('modalBookTitle').textContent = book.title;
-            document.getElementById('modalBookAuthor').textContent = `Oleh ${book.author}`;
-            document.getElementById('modalBookSynopsis').textContent = book.synopsis;
-            document.getElementById('modalBookIsbn').textContent = `${book.id} / ISBN ${book.isbn}`;
-            document.getElementById('modalBookFormat').textContent = `${book.file_format} (${book.file_size_mb} MB • ${book.pages} hlm)`;
-            document.getElementById('modalBookTech').textContent = book.technical_metadata;
-            document.getElementById('modalBookRates').textContent = `${formatRupiahJS(book.daily_rate)}/hari (+Layanan ${formatRupiahJS(book.service_fee)})`;
-
-            if (typeof modal.showModal === 'function') {
-                modal.showModal();
-            }
-        });
-    });
-
-    if (btnCloseModal && modal) {
-        btnCloseModal.addEventListener('click', () => modal.close());
+    /* ---------- 7. Validasi form ---------- */
+    function setError(input, errId, message) {
+        const err = document.getElementById(errId);
+        input.classList.toggle('is-invalid', Boolean(message));
+        if (err) err.textContent = message || '';
+        return !message;
     }
 
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.close();
-            }
-        });
-    }
-
-    if (btnModalSelectBook && modal) {
-        btnModalSelectBook.addEventListener('click', () => {
-            if (currentModalBookId && simEbookSelect) {
-                simEbookSelect.value = currentModalBookId;
-                updateRentalSimulation();
-            }
-            modal.close();
-        });
-    }
-
-    // --- 6. DYNAMIC SUBCLASS FIELDS PADA FORM TAMBAH E-BOOK ---
-    const ebookMediaTypeSelect = document.getElementById('ebookMediaType');
-    const groupDoi = document.getElementById('groupDoi');
-    const groupAudio = document.getElementById('groupAudio');
-
-    function syncSubclassFields() {
-        if (!ebookMediaTypeSelect) return;
-        const val = ebookMediaTypeSelect.value;
-        if (groupDoi) groupDoi.hidden = val !== 'academic';
-        if (groupAudio) groupAudio.hidden = val !== 'interactive';
-    }
-
-    if (ebookMediaTypeSelect) {
-        ebookMediaTypeSelect.addEventListener('change', syncSubclassFields);
-        syncSubclassFields();
-    }
-
-    // --- 7. CLIENT-SIDE FORM VALIDATION (REGISTRASI MEMBER & TAMBAH E-BOOK) ---
-    function setFieldError(inputEl, errorId, message) {
-        const errSpan = document.getElementById(errorId);
-        if (message) {
-            inputEl.classList.add('is-invalid');
-            if (errSpan) errSpan.textContent = message;
-            return false;
-        } else {
-            inputEl.classList.remove('is-invalid');
-            if (errSpan) errSpan.textContent = '';
-            return true;
+    $('#formRegisterMember')?.addEventListener('submit', (ev) => {
+        const name = $('#memberName');
+        const email = $('#memberEmail');
+        const inst = $('#memberInstitution');
+        const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
+        const results = [
+            setError(name, 'err-memberName', name.value.trim().length < 3 ? 'Nama minimal 3 huruf.' : ''),
+            setError(email, 'err-memberEmail', emailOk ? '' : 'Format email belum benar.'),
+            setError(inst, 'err-memberInstitution', inst.value.trim().length < 3 ? 'Kelas / fakultas wajib diisi.' : ''),
+        ];
+        if (results.includes(false)) {
+            ev.preventDefault();
+            $('.is-invalid', ev.target)?.focus();
         }
-    }
+    });
 
-    const formRegisterMember = document.getElementById('formRegisterMember');
-    if (formRegisterMember) {
-        formRegisterMember.addEventListener('submit', (e) => {
-            const nameEl = document.getElementById('memberName');
-            const emailEl = document.getElementById('memberEmail');
-            const instEl = document.getElementById('memberInstitution');
+    $('#formAddEbook')?.addEventListener('submit', (ev) => {
+        const rate = parseFloat(ebookRate.value);
+        const stock = parseInt($('#ebookStock').value, 10);
+        const synopsis = $('#ebookSynopsis');
+        const results = [
+            setError(ebookTitle, 'err-ebookTitle', ebookTitle.value.trim().length < 4 ? 'Judul minimal 4 huruf.' : ''),
+            setError(ebookAuthor, 'err-ebookAuthor', ebookAuthor.value.trim().length < 3 ? 'Nama penulis minimal 3 huruf.' : ''),
+            setError(ebookRate, 'err-ebookDailyRate', isNaN(rate) || rate < 1000 ? 'Harga minimal Rp 1.000 per hari.' : ''),
+            setError($('#ebookStock'), 'err-ebookStock', isNaN(stock) || stock < 1 ? 'Stok minimal 1.' : ''),
+            setError(synopsis, 'err-ebookSynopsis', synopsis.value.trim().length < 15 ? 'Sinopsis minimal 15 huruf.' : ''),
+        ];
+        if (results.includes(false)) {
+            ev.preventDefault();
+            $('.is-invalid', ev.target)?.focus();
+        }
+    });
 
-            let valid = true;
-
-            if (nameEl.value.trim().length < 3) {
-                valid = setFieldError(nameEl, 'err-memberName', 'Nama lengkap minimal 3 karakter.') && valid;
-            } else {
-                setFieldError(nameEl, 'err-memberName', '');
-            }
-
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(emailEl.value.trim())) {
-                valid = setFieldError(emailEl, 'err-memberEmail', 'Masukkan alamat email yang valid.') && valid;
-            } else {
-                setFieldError(emailEl, 'err-memberEmail', '');
-            }
-
-            if (instEl.value.trim().length < 3) {
-                valid = setFieldError(instEl, 'err-memberInstitution', 'Afiliasi/institusi wajib diisi.') && valid;
-            } else {
-                setFieldError(instEl, 'err-memberInstitution', '');
-            }
-
-            if (!valid) {
-                e.preventDefault();
-            }
+    /* Hapus tanda error saat pengguna mulai mengetik */
+    $$('.field input, .field textarea').forEach((input) => {
+        input.addEventListener('input', () => {
+            if (!input.classList.contains('is-invalid')) return;
+            input.classList.remove('is-invalid');
+            const err = input.parentElement.querySelector('.field__error');
+            if (err) err.textContent = '';
         });
-    }
-
-    const formAddEbook = document.getElementById('formAddEbook');
-    if (formAddEbook) {
-        formAddEbook.addEventListener('submit', (e) => {
-            const titleEl = document.getElementById('ebookTitle');
-            const authorEl = document.getElementById('ebookAuthor');
-            const rateEl = document.getElementById('ebookDailyRate');
-            const synopsisEl = document.getElementById('ebookSynopsis');
-
-            let valid = true;
-
-            if (titleEl.value.trim().length < 4) {
-                valid = setFieldError(titleEl, 'err-ebookTitle', 'Judul e-book minimal 4 karakter.') && valid;
-            } else {
-                setFieldError(titleEl, 'err-ebookTitle', '');
-            }
-
-            if (authorEl.value.trim().length < 3) {
-                valid = setFieldError(authorEl, 'err-ebookAuthor', 'Nama penulis minimal 3 karakter.') && valid;
-            } else {
-                setFieldError(authorEl, 'err-ebookAuthor', '');
-            }
-
-            const rateVal = parseFloat(rateEl.value);
-            if (isNaN(rateVal) || rateVal < 1000) {
-                valid = setFieldError(rateEl, 'err-ebookDailyRate', 'Tarif sewa minimal Rp 1.000/hari.') && valid;
-            } else {
-                setFieldError(rateEl, 'err-ebookDailyRate', '');
-            }
-
-            if (synopsisEl.value.trim().length < 15) {
-                valid = setFieldError(synopsisEl, 'err-ebookSynopsis', 'Sinopsis minimal 15 karakter.') && valid;
-            } else {
-                setFieldError(synopsisEl, 'err-ebookSynopsis', '');
-            }
-
-            if (!valid) {
-                e.preventDefault();
-            }
-        });
-    }
+    });
 });

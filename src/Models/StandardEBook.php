@@ -60,7 +60,7 @@ class StandardEBook extends MediaItem
 
     public function getMediaTypeLabel(): string
     {
-        return 'Standard Trade E-Book';
+        return 'E-Book Umum';
     }
 
     /**

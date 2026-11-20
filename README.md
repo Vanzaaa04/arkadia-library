@@ -1,23 +1,22 @@
-# Arkadia — Digital Monograph & E-Book Lending System
+# Arkadia — Aplikasi Sewa E-Book Digital
 
-Prototipe aplikasi web interaktif untuk **UTS Pemrograman Web Semester Ganjil 2026/2027** (Program Studi Informatika — Fakultas Teknik UMM) yang mengintegrasikan antarmuka Front-End modern (**HTML5 Semantik, CSS3, Vanilla ES6 JS**) dengan backend engine **PHP 8.x OOP murni tanpa framework**.
+Prototipe aplikasi web interaktif untuk **UTS Pemrograman Web Semester Ganjil 2026/2027** (Program Studi Informatika — Fakultas Teknik UMM). Dibangun menggunakan **HTML5 Semantik, CSS3, Vanilla ES6 JavaScript**, dan **PHP 8.x OOP murni tanpa framework** dengan penyimpanan **JSON & XML**.
 
-## Fitur Utama
+## Cara Pakai Aplikasi (3 Langkah)
 
-1. **Katalog Media Digital Interaktif**
-   - Tampilan kartu katalog modern dengan *custom vector covers*, *live search*, serta filter berdasarkan kategori, subclass media OOP, dan ketersediaan stok lisensi.
-   - Dialog detail spesifikasi e-book (`<dialog>`) & formulir penambahan koleksi baru (`+ Tambah E-Book`).
-2. **Dual Theme (Light & Dark Mode)**
-   - Desain modern terinspirasi SaaS 2026 dengan tombol toggle tema gelap/terang (`localStorage` persistent).
-3. **Manajemen Member (User)**
-   - Direktori anggota lengkap dengan kartu profil, *quota meter*, dan formulir registrasi dengan validasi client-side JavaScript & server-side PHP.
-4. **Simulasi & Transaksi Penyewaan E-Book Polimorfik**
-   - Kalkulator sewa real-time (*quick duration preset chips*, *range slider*, dan *live invoice summary*) yang menghitung tarif pokok, biaya layanan media, diskon tier member, serta batas peminjaman sesuai subclass runtime.
-   - Ledger transaksi aktif & fitur pengembalian e-book yang memulihkan stok lisensi dan kuota member secara otomatis.
-5. **Inspektor PHP 8.x OOP (Reflection API)**
-   - Panel khusus yang membaca seluruh namespace, properti `private`/`protected`, pewarisan, dan metode polimorfik di folder `src/` secara langsung saat runtime.
-6. **Persistensi Ganda JSON & XML**
-   - Seluruh state objek diserialisasikan ke berkas `data/ebooks.json`, `data/members.json`, `data/transactions.json`, serta diekspor otomatis ke `data/ebooks.xml`.
+1. **Pilih Buku di Katalog** — Buka menu **Beranda** atau **Katalog**, cari judul/penulis atau filter berdasarkan kategori & jenis buku, klik sampul untuk melihat detail lengkap, atau langsung klik **Sewa**.
+2. **Atur Anggota & Lama Sewa** — Di modal sewa, pilih anggota penyewa dan durasi hari (`1`–`21+` hari). Total biaya dihitung otomatis secara real-time melalui `fetch()` ke server PHP (`?api=simulate`) sesuai diskon tipe anggota dan tarif buku.
+3. **Baca & Kembalikan** — Pantau daftar buku yang sedang dipinjam beserta sisa hari jatuh tempo di menu **Peminjaman**, dan klik **Kembalikan** saat selesai untuk memulihkan stok buku dan kuota anggota.
+
+## Menu & Fitur Utama
+
+- **Beranda** — Pengantar singkat cara pakai dalam 3 langkah, buku pilihan, dan perbandingan 3 jenis keanggotaan (`Anggota Reguler`, `Anggota Premium`, `Dosen & Peneliti`).
+- **Katalog** — Pencarian langsung, filter jenis buku (`Umum`, `Akademik`, `Interaktif`), filter ketersediaan stok, chip kategori, modal detail buku, dan modal transaksi sewa.
+- **Peminjaman** — Daftar pinjaman aktif lengkap dengan indikator jatuh tempo, tombol **Kembalikan**, serta tabel riwayat transaksi selesai.
+- **Anggota** — Daftar kartu anggota dengan avatar inisial, kuota pinjaman, tombol pintas **Sewakan buku**, dan formulir pendaftaran anggota baru bervalidasi JavaScript & PHP.
+- **Tambah Buku** — Formulir penambahan e-book baru disertai pratinjau sampul live (*live cover preview*) dengan pilihan 6 warna sampul.
+- **Info Sistem** — Halaman khusus ringkasan pemenuhan rubrik UTS (Front-End 30, PHP OOP 40, Struktur Berkas 30), tabel bukti polimorfisme, dan inspektor class live menggunakan **PHP Reflection API**.
+- **Tema Terang & Gelap + Reset Data** — Toggle tema gelap/terang (`localStorage`) dan tombol reset data ke kondisi contoh awal di pojok kanan atas.
 
 ## Arsitektur PHP 8.x OOP (`src/`)
 
@@ -33,27 +32,27 @@ Prototipe aplikasi web interaktif untuk **UTS Pemrograman Web Semester Ganjil 20
 
 ```text
 ├── autoload.php                # PSR-4 Autoloader (App\ -> src/)
-├── index.php                   # Controller, AJAX endpoints, & Semantik HTML5 UI
+├── index.php                   # Controller, AJAX endpoint (?api=simulate), & UI HTML5 Semantik
 ├── assets/
-│   ├── css/style.css           # Design system (Light & Dark Mode, Responsive Grid)
-│   └── js/app.js               # Theme switcher, filter katalog, kalkulator & validasi
+│   ├── css/style.css           # Desain responsif Light/Dark mode
+│   └── js/app.js               # Navigasi, filter, modal sewa via fetch(), preview & validasi
 ├── data/
 │   ├── ebooks.json             # Penyimpanan katalog e-book (JSON)
 │   ├── ebooks.xml              # Ekspor katalog otomatis (XML)
-│   ├── members.json            # Penyimpanan data member (JSON)
-│   └── transactions.json       # Penyimpanan riwayat transaksi (JSON)
+│   ├── members.json            # Penyimpanan data anggota (JSON)
+│   └── transactions.json       # Penyimpanan riwayat peminjaman (JSON)
 └── src/
     ├── Contracts/
     ├── Models/
     └── Services/
 ```
 
-## Cara Menjalankan Secara Lokal
+## Menjalankan Secara Lokal
 
-Pastikan **PHP 8.1+** sudah terpasang, lalu jalankan perintah berikut di direktori root proyek:
+Pastikan **PHP 8.1+** sudah terpasang, lalu jalankan di direktori proyek:
 
 ```bash
 php -S 127.0.0.1:8088
 ```
 
-Buka browser dan kunjungi: **http://127.0.0.1:8088**
+Lalu buka **http://127.0.0.1:8088** di browser.
