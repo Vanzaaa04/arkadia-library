@@ -90,6 +90,17 @@ class LibraryManager
         return $this->members[$id] ?? null;
     }
 
+    public function getMemberByEmail(string $email): ?User
+    {
+        $needle = strtolower(trim($email));
+        foreach ($this->members as $member) {
+            if (strtolower($member->getEmail()) === $needle) {
+                return $member;
+            }
+        }
+        return null;
+    }
+
     /**
      * @return array<int, Transaction>
      */

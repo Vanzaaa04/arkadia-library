@@ -6,6 +6,7 @@ require_once __DIR__ . '/autoload.php';
 
 use App\Models\MediaItem;
 use App\Models\User;
+use App\Services\AuthService;
 use App\Services\LibraryManager;
 use App\Services\OopInspectorService;
 
@@ -13,6 +14,7 @@ session_start();
 
 $manager = new LibraryManager();
 $inspector = new OopInspectorService();
+$auth = new AuthService($manager);
 
 /* ==========================================================================
    1. API JSON — dipanggil JavaScript (fetch) untuk menghitung biaya sewa
@@ -43,17 +45,69 @@ if (isset($_GET['api'])) {
 }
 
 /* ==========================================================================
-   2. AKSI FORM (POST) — Sewa, Kembalikan, Tambah Buku, Daftar Anggota, Reset
+   2. AKSI FORM (POST) — Autentikasi, Sewa, Kembalikan, Tambah Buku, Reset
    ========================================================================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     $nextTab = (string) ($_POST['return_tab'] ?? 'home');
+    $pendingBook = trim((string) ($_POST['pending_book'] ?? ''));
+    $extraQuery = '';
 
     try {
         switch ($action) {
+            case 'login_email':
+                $user = $auth->loginByEmail((string) ($_POST['email'] ?? ''));
+                $_SESSION['flash'] = [
+                    'type' => 'success',
+                    'title' => 'Berhasil masuk',
+                    'message' => sprintf('Selamat datang kembali, %s (%s).', $user->getName(), $user->getTierLabel()),
+                ];
+                if ($pendingBook !== '') {
+                    $extraQuery .= '&rent=' . urlencode($pendingBook);
+                }
+                break;
+
+            case 'login_demo':
+                $user = $auth->loginById((string) ($_POST['member_id'] ?? ''));
+                $_SESSION['flash'] = [
+                    'type' => 'success',
+                    'title' => 'Masuk ke akun',
+                    'message' => sprintf('Sekarang Anda masuk sebagai %s (%s).', $user->getName(), $user->getTierLabel()),
+                ];
+                if ($pendingBook !== '') {
+                    $extraQuery .= '&rent=' . urlencode($pendingBook);
+                }
+                break;
+
+            case 'auth_register':
+                $user = $auth->registerAndLogin($_POST);
+                $_SESSION['flash'] = [
+                    'type' => 'success',
+                    'title' => 'Akun berhasil dibuat',
+                    'message' => sprintf('Akun %s (%s) siap digunakan untuk menyewa e-book.', $user->getName(), $user->getTierLabel()),
+                ];
+                if ($pendingBook !== '') {
+                    $extraQuery .= '&rent=' . urlencode($pendingBook);
+                }
+                break;
+
+            case 'logout':
+                $auth->logout();
+                $_SESSION['flash'] = [
+                    'type' => 'info',
+                    'title' => 'Keluar dari akun',
+                    'message' => 'Anda telah keluar. Silakan masuk lagi atau pilih akun demo untuk menyewa.',
+                ];
+                $nextTab = 'home';
+                break;
+
             case 'rent_ebook':
+                $activeUser = $auth->getCurrentUser();
+                if ($activeUser === null) {
+                    throw new DomainException('Silakan masuk atau daftar anggota terlebih dahulu sebelum menyewa e-book.');
+                }
                 $trx = $manager->createRentalTransaction(
-                    (string) ($_POST['member_id'] ?? ''),
+                    $activeUser->getId(),
                     (string) ($_POST['ebook_id'] ?? ''),
                     (int) ($_POST['duration_days'] ?? 0)
                 );
@@ -102,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
 
             case 'reset_demo':
+                $auth->logout();
                 $manager->resetDemoData();
                 $_SESSION['flash'] = [
                     'type' => 'info',
@@ -117,9 +172,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'title' => 'Tidak bisa diproses',
             'message' => $e->getMessage(),
         ];
+        if ($action === 'login_email') {
+            $extraQuery .= '&auth=login';
+        } elseif ($action === 'auth_register') {
+            $extraQuery .= '&auth=register';
+        }
+        if ($pendingBook !== '' && in_array($action, ['login_email', 'auth_register', 'login_demo'], true)) {
+            $extraQuery .= '&rent=' . urlencode($pendingBook);
+        }
     }
 
-    header('Location: index.php?tab=' . urlencode($nextTab));
+    header('Location: index.php?tab=' . urlencode($nextTab) . $extraQuery);
     exit;
 }
 
@@ -172,6 +235,14 @@ function shortAuthor(string $author): string
 {
     $parts = preg_split('/\s*(?:&|,)\s*/', $author) ?: [$author];
     return trim((string) $parts[0]);
+}
+
+function firstName(string $name): string
+{
+    $clean = preg_replace('/^(Dr\.|Prof\.|Ir\.)\s+/i', '', trim($name)) ?? $name;
+    $clean = preg_replace('/,.*$/', '', $clean) ?? $clean;
+    $parts = preg_split('/\s+/', trim($clean)) ?: [$clean];
+    return (string) ($parts[0] ?? $clean);
 }
 
 function typeShort(string $code): string
@@ -245,6 +316,7 @@ if (!in_array($tab, $validTabs, true)) {
     $tab = 'home';
 }
 
+$currentUser = $auth->getCurrentUser();
 $ebooks = $manager->getAllEbooks();
 $members = $manager->getAllMembers();
 $transactions = $manager->getAllTransactions();
@@ -254,8 +326,26 @@ $oopReport = $inspector->inspectArchitecture();
 
 $activeLoans = array_values(array_filter($transactions, fn($t) => $t->isActive()));
 $historyLoans = array_values(array_filter($transactions, fn($t) => !$t->isActive()));
+$myActiveLoans = $currentUser !== null
+    ? array_values(array_filter($activeLoans, fn($t) => $t->getMemberId() === $currentUser->getId()))
+    : [];
+$myHistoryLoans = $currentUser !== null
+    ? array_values(array_filter($historyLoans, fn($t) => $t->getMemberId() === $currentUser->getId()))
+    : [];
+
 $featuredBooks = array_slice($ebooks, 0, 4);
 $heroBooks = array_slice($ebooks, 0, 3);
+
+// 1 contoh akun per jenis user untuk 1-klik tombol demo pada modal Masuk
+$demoAccounts = [];
+foreach (['regular', 'premium', 'faculty'] as $tierCode) {
+    foreach ($members as $m) {
+        if ($m->getTierCode() === $tierCode) {
+            $demoAccounts[] = $m;
+            break;
+        }
+    }
+}
 
 // Contoh objek tiap subclass User untuk tabel perbandingan keanggotaan (polimorfisme)
 $tierSamples = [];
@@ -273,6 +363,7 @@ foreach (['regular', 'premium', 'faculty'] as $i => $tierCode) {
 
 $clientCatalog = array_map(fn($b) => $b->toArray(), $ebooks);
 $clientMembers = array_map(fn($m) => $m->toArray(), $members);
+$loanBadgeCount = $currentUser !== null ? count($myActiveLoans) : count($activeLoans);
 
 function navClass(string $tab, string $name): string
 {
@@ -327,7 +418,7 @@ function navClass(string $tab, string $name): string
                 <button type="button" class="<?= navClass($tab, 'loans') ?>" data-page="loans">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                     <span>Peminjaman</span>
-                    <?php if (count($activeLoans) > 0): ?><span class="nav-count"><?= count($activeLoans) ?></span><?php endif; ?>
+                    <?php if ($loanBadgeCount > 0): ?><span class="nav-count"><?= $loanBadgeCount ?></span><?php endif; ?>
                 </button>
                 <button type="button" class="<?= navClass($tab, 'members') ?>" data-page="members">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -344,11 +435,31 @@ function navClass(string $tab, string $name): string
             </nav>
 
             <div class="topbar__actions">
+                <?php if ($currentUser === null): ?>
+                    <button type="button" id="btnOpenAuth" class="btn btn--primary btn--sm" data-open-auth="login">
+                        Masuk / Daftar
+                    </button>
+                <?php else: ?>
+                    <button type="button" class="user-pill" data-open-auth="login" title="Ganti akun anggota">
+                        <span class="avatar avatar--xs avatar--<?= e($currentUser->getTierCode()) ?>"><?= e(memberInitials($currentUser->getName())) ?></span>
+                        <span class="user-pill__text">
+                            <strong><?= e(firstName($currentUser->getName())) ?></strong>
+                            <small><?= e($currentUser->getTierLabel()) ?></small>
+                        </span>
+                    </button>
+                    <form method="POST" action="index.php" class="inline-form">
+                        <input type="hidden" name="action" value="logout">
+                        <button type="submit" class="icon-btn logout-btn" aria-label="Keluar dari akun" title="Keluar dari akun">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                        </button>
+                    </form>
+                <?php endif; ?>
+
                 <button type="button" id="btnTheme" class="icon-btn" aria-label="Ganti tema terang/gelap" title="Ganti tema terang/gelap">
                     <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                     <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
                 </button>
-                <form method="POST" action="index.php" onsubmit="return confirm('Kembalikan semua data ke contoh awal?');">
+                <form method="POST" action="index.php" class="inline-form" onsubmit="return confirm('Kembalikan semua data ke contoh awal?');">
                     <input type="hidden" name="action" value="reset_demo">
                     <button type="submit" class="icon-btn" aria-label="Kembalikan data contoh" title="Kembalikan data ke contoh awal">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -378,18 +489,27 @@ function navClass(string $tab, string $name): string
         <section id="page-home" class="page <?= $tab === 'home' ? 'is-active' : '' ?>" aria-labelledby="homeTitle">
             <div class="hero">
                 <div class="hero__text">
-                    <span class="eyebrow">Perpustakaan digital kampus</span>
+                    <?php if ($currentUser !== null): ?>
+                        <span class="eyebrow">Halo, <?= e(firstName($currentUser->getName())) ?> &middot; <?= e($currentUser->getTierLabel()) ?></span>
+                    <?php else: ?>
+                        <span class="eyebrow">Perpustakaan digital kampus</span>
+                    <?php endif; ?>
                     <h1 id="homeTitle">Sewa e-book favoritmu, <span class="text-gradient">baca tanpa ribet.</span></h1>
                     <p class="hero__lead">
-                        Tidak perlu beli buku mahal. Pilih e-book, tentukan berapa hari ingin membaca,
-                        lalu bayar per hari. Anggota Premium dan Dosen dapat potongan harga otomatis.
+                        Tidak perlu beli buku mahal. Daftar sebagai anggota, pilih e-book, tentukan berapa hari ingin membaca,
+                        dan dapatkan diskon otomatis sesuai jenis keanggotaanmu.
                     </p>
                     <div class="hero__cta">
                         <button type="button" class="btn btn--primary btn--lg" data-goto="catalog">
                             Jelajahi Katalog
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
                         </button>
-                        <a href="#cara-pakai" class="btn btn--ghost btn--lg">Cara pakai</a>
+                        <?php if ($currentUser === null): ?>
+                            <button type="button" class="btn btn--ghost btn--lg" data-open-auth="register">Daftar Anggota</button>
+                            <a href="#cara-pakai" class="btn btn--soft btn--lg">Cara pakai</a>
+                        <?php else: ?>
+                            <button type="button" class="btn btn--ghost btn--lg" data-goto="loans">Pinjaman Saya (<?= count($myActiveLoans) ?>)</button>
+                        <?php endif; ?>
                     </div>
                     <dl class="hero__stats">
                         <div><dt>Judul e-book</dt><dd><?= (int) $metrics['total_titles'] ?></dd></div>
@@ -404,7 +524,7 @@ function navClass(string $tab, string $name): string
                     <?php endforeach; ?>
                     <div class="hero__float">
                         <span class="hero__float-icon">✓</span>
-                        <div><strong>Diskon 20%</strong><small>untuk Anggota Premium</small></div>
+                        <div><strong>Diskon hingga 30%</strong><small>untuk Premium &amp; Dosen</small></div>
                     </div>
                 </div>
             </div>
@@ -413,23 +533,23 @@ function navClass(string $tab, string $name): string
             <section id="cara-pakai" class="block" aria-labelledby="howTitle">
                 <div class="block__head">
                     <h2 id="howTitle">Cara pakai dalam 3 langkah</h2>
-                    <p>Semua bisa dilakukan dari halaman ini, tanpa login.</p>
+                    <p>Buka katalog bebas kapan saja, lalu masuk atau daftar saat ingin menyewa.</p>
                 </div>
                 <ol class="steps">
                     <li class="step">
                         <span class="step__num">1</span>
-                        <h3>Pilih buku</h3>
-                        <p>Buka <strong>Katalog</strong>, cari judul atau filter kategori, lalu klik tombol <strong>Sewa</strong>.</p>
+                        <h3>Daftar atau Masuk</h3>
+                        <p>Pilih tipe <strong>Reguler</strong>, <strong>Premium</strong>, atau <strong>Dosen</strong> (atau coba 1 klik akun demo).</p>
                     </li>
                     <li class="step">
                         <span class="step__num">2</span>
-                        <h3>Atur sewa</h3>
-                        <p>Pilih nama anggota dan lama sewa. Total biaya langsung muncul beserta diskonnya.</p>
+                        <h3>Pilih &amp; Sewa Buku</h3>
+                        <p>Cari e-book di <strong>Katalog</strong>, klik <strong>Sewa</strong>, lalu pilih durasi hari. Diskon akunmu langsung terhitung.</p>
                     </li>
                     <li class="step">
                         <span class="step__num">3</span>
-                        <h3>Baca &amp; kembalikan</h3>
-                        <p>Pantau tanggal jatuh tempo di menu <strong>Peminjaman</strong> dan klik <strong>Kembalikan</strong> jika selesai.</p>
+                        <h3>Baca &amp; Kembalikan</h3>
+                        <p>Pantau tanggal jatuh tempo di menu <strong>Peminjaman</strong> dan klik <strong>Kembalikan</strong> saat selesai.</p>
                     </li>
                 </ol>
             </section>
@@ -485,10 +605,17 @@ function navClass(string $tab, string $name): string
                     <h1 id="catalogTitle">Katalog E-Book</h1>
                     <p>Menampilkan <strong id="catalogCount"><?= count($ebooks) ?></strong> dari <?= count($ebooks) ?> buku.</p>
                 </div>
-                <div id="rentingFor" class="renting-for" hidden>
-                    <span>Menyewa untuk: <strong id="rentingForName"></strong></span>
-                    <button type="button" id="btnClearRentingFor" aria-label="Batalkan pilihan anggota">&times;</button>
-                </div>
+                <?php if ($currentUser !== null): ?>
+                    <div class="account-chip-inline">
+                        <span class="avatar avatar--xs avatar--<?= e($currentUser->getTierCode()) ?>"><?= e(memberInitials($currentUser->getName())) ?></span>
+                        <span>Menyewa sebagai <strong><?= e($currentUser->getName()) ?></strong> (<?= e($currentUser->getTierLabel()) ?>)</span>
+                        <button type="button" class="link-btn" data-open-auth="login">Ganti</button>
+                    </div>
+                <?php else: ?>
+                    <button type="button" class="btn btn--soft btn--sm" data-open-auth="login">
+                        Masuk / Daftar untuk menyewa
+                    </button>
+                <?php endif; ?>
             </div>
 
             <div class="toolbar" role="search">
@@ -538,11 +665,32 @@ function navClass(string $tab, string $name): string
                     <h1 id="loansTitle">Peminjaman</h1>
                     <p>Pantau buku yang sedang dipinjam dan kembalikan jika sudah selesai dibaca.</p>
                 </div>
-                <div class="summary-pills">
-                    <span class="pill pill--warning"><?= count($activeLoans) ?> sedang dipinjam</span>
-                    <span class="pill pill--success"><?= count($historyLoans) ?> selesai</span>
-                </div>
+                <?php if ($currentUser !== null): ?>
+                    <div class="scope-tabs" role="tablist" aria-label="Filter daftar peminjaman">
+                        <button type="button" class="scope-tab is-active" data-loan-scope="mine">
+                            Pinjaman saya (<?= count($myActiveLoans) ?>)
+                        </button>
+                        <button type="button" class="scope-tab" data-loan-scope="all">
+                            Semua anggota (<?= count($activeLoans) ?>)
+                        </button>
+                    </div>
+                <?php else: ?>
+                    <div class="summary-pills">
+                        <span class="pill pill--warning"><?= count($activeLoans) ?> sedang dipinjam</span>
+                        <span class="pill pill--success"><?= count($historyLoans) ?> selesai</span>
+                    </div>
+                <?php endif; ?>
             </div>
+
+            <?php if ($currentUser === null): ?>
+                <div class="guest-banner">
+                    <div>
+                        <strong>Belum masuk ke akun</strong>
+                        <p class="muted small">Masuk atau daftar untuk menyewa e-book dan melihat daftar pinjaman milik Anda sendiri.</p>
+                    </div>
+                    <button type="button" class="btn btn--primary btn--sm" data-open-auth="login">Masuk / Daftar</button>
+                </div>
+            <?php endif; ?>
 
             <h2 class="section-label">Sedang dipinjam</h2>
             <?php if (count($activeLoans) === 0): ?>
@@ -553,15 +701,16 @@ function navClass(string $tab, string $name): string
                     <button type="button" class="btn btn--primary" data-goto="catalog">Buka Katalog</button>
                 </div>
             <?php else: ?>
-                <div class="loan-list">
+                <div class="loan-list" id="activeLoanList">
                     <?php foreach ($activeLoans as $loan): ?>
                         <?php
                         $loanBook = $manager->getEbookById($loan->getEbookId());
                         $left = daysUntil($loan->getDueDate());
                         $dueClass = $left < 0 ? 'due--late' : ($left <= 3 ? 'due--soon' : 'due--ok');
                         $dueText = $left < 0 ? 'Terlambat ' . abs($left) . ' hari' : ($left === 0 ? 'Jatuh tempo hari ini' : 'Sisa ' . $left . ' hari');
+                        $hiddenForMine = ($currentUser !== null && $loan->getMemberId() !== $currentUser->getId());
                         ?>
-                        <article class="loan-card">
+                        <article class="loan-card" data-loan-owner="<?= e($loan->getMemberId()) ?>" <?= $hiddenForMine ? 'hidden' : '' ?>>
                             <div class="loan-card__cover">
                                 <?= $loanBook !== null ? renderCover($loanBook, 'cover--sm') : '' ?>
                             </div>
@@ -589,6 +738,12 @@ function navClass(string $tab, string $name): string
                         </article>
                     <?php endforeach; ?>
                 </div>
+                <div id="emptyMyLoans" class="empty" <?= ($currentUser !== null && count($myActiveLoans) === 0) ? '' : 'hidden' ?>>
+                    <div class="empty__icon" aria-hidden="true">📖</div>
+                    <h3>Anda belum menyewa buku</h3>
+                    <p>Pilih e-book dari katalog untuk mulai membaca dengan diskon akun Anda.</p>
+                    <button type="button" class="btn btn--primary" data-goto="catalog">Buka Katalog</button>
+                </div>
             <?php endif; ?>
 
             <h2 class="section-label">Riwayat selesai</h2>
@@ -603,22 +758,27 @@ function navClass(string $tab, string $name): string
                             <th class="num">Total</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="historyTableBody">
                         <?php if (count($historyLoans) === 0): ?>
                             <tr><td colspan="5" class="muted center">Belum ada riwayat.</td></tr>
-                        <?php endif; ?>
-                        <?php foreach ($historyLoans as $h): ?>
-                            <tr>
-                                <td>
-                                    <strong><?= e($h->getEbookTitle()) ?></strong>
-                                    <small class="muted block-sm"><?= e($h->getTransactionCode()) ?></small>
-                                </td>
-                                <td><?= e($h->getMemberName()) ?></td>
-                                <td><?= $h->getDurationDays() ?> hari</td>
-                                <td><?= formatTanggal($h->getReturnDate()) ?></td>
-                                <td class="num"><strong><?= formatRupiah($h->getTotalCost()) ?></strong></td>
+                        <?php else: ?>
+                            <?php foreach ($historyLoans as $h): ?>
+                                <?php $hideHist = ($currentUser !== null && $h->getMemberId() !== $currentUser->getId()); ?>
+                                <tr data-loan-owner="<?= e($h->getMemberId()) ?>" <?= $hideHist ? 'hidden' : '' ?>>
+                                    <td>
+                                        <strong><?= e($h->getEbookTitle()) ?></strong>
+                                        <small class="muted block-sm"><?= e($h->getTransactionCode()) ?></small>
+                                    </td>
+                                    <td><?= e($h->getMemberName()) ?></td>
+                                    <td><?= $h->getDurationDays() ?> hari</td>
+                                    <td><?= formatTanggal($h->getReturnDate()) ?></td>
+                                    <td class="num"><strong><?= formatRupiah($h->getTotalCost()) ?></strong></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <tr id="emptyMyHistoryRow" <?= ($currentUser !== null && count($myHistoryLoans) === 0) ? '' : 'hidden' ?>>
+                                <td colspan="5" class="muted center">Belum ada riwayat pengembalian untuk akun ini.</td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -629,15 +789,18 @@ function navClass(string $tab, string $name): string
             <div class="page-head">
                 <div>
                     <h1 id="membersTitle">Anggota</h1>
-                    <p>Daftar anggota perpustakaan beserta hak sewanya.</p>
+                    <p>Daftar anggota terdaftar. Klik <strong>Masuk sebagai akun ini</strong> untuk berpindah akun kapan saja.</p>
                 </div>
                 <a href="#formMember" class="btn btn--primary">+ Daftar anggota baru</a>
             </div>
 
             <div class="member-grid">
                 <?php foreach ($members as $member): ?>
-                    <?php $ratio = min(100, (int) round($member->getActiveLoans() / max(1, $member->getMaxConcurrentLoans()) * 100)); ?>
-                    <article class="member-card">
+                    <?php
+                    $ratio = min(100, (int) round($member->getActiveLoans() / max(1, $member->getMaxConcurrentLoans()) * 100));
+                    $isCurrent = $currentUser !== null && $currentUser->getId() === $member->getId();
+                    ?>
+                    <article class="member-card <?= $isCurrent ? 'is-current' : '' ?>">
                         <div class="member-card__top">
                             <span class="avatar avatar--<?= e($member->getTierCode()) ?>"><?= e(memberInitials($member->getName())) ?></span>
                             <div class="member-card__id">
@@ -656,9 +819,16 @@ function navClass(string $tab, string $name): string
                         </div>
                         <div class="member-card__foot">
                             <span class="muted mono"><?= e($member->getEmail()) ?></span>
-                            <button type="button" class="btn btn--soft btn--sm" data-rent-for="<?= e($member->getId()) ?>" <?= $member->canBorrowMore() ? '' : 'disabled' ?>>
-                                <?= $member->canBorrowMore() ? 'Sewakan buku' : 'Kuota penuh' ?>
-                            </button>
+                            <?php if ($isCurrent): ?>
+                                <span class="pill pill--success">Akun aktif</span>
+                            <?php else: ?>
+                                <form method="POST" action="index.php" class="inline-form">
+                                    <input type="hidden" name="action" value="login_demo">
+                                    <input type="hidden" name="member_id" value="<?= e($member->getId()) ?>">
+                                    <input type="hidden" name="return_tab" value="members">
+                                    <button type="submit" class="btn btn--soft btn--sm">Masuk akun ini</button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     </article>
                 <?php endforeach; ?>
@@ -834,15 +1004,15 @@ function navClass(string $tab, string $name): string
                     <div class="rubric-card__head"><span>Front-End</span><strong>30 poin</strong></div>
                     <ul class="checklist">
                         <li>Elemen semantik HTML5: <code>header</code>, <code>nav</code>, <code>main</code>, <code>section</code>, <code>article</code>, <code>aside</code>, <code>dialog</code>, <code>footer</code></li>
-                        <li>Validasi form di JavaScript (anggota &amp; buku) + validasi ulang di PHP</li>
+                        <li>Validasi form di JavaScript (masuk, daftar, buku) + validasi ulang di PHP</li>
                         <li>Layout responsif (CSS Grid/Flexbox) dengan tema terang &amp; gelap</li>
-                        <li>Interaktif: pencarian live, filter, modal, kalkulator sewa via <code>fetch()</code></li>
+                        <li>Interaktif: pencarian live, filter, auth &amp; sewa modal, kalkulasi via <code>fetch()</code></li>
                     </ul>
                 </article>
                 <article class="rubric-card">
                     <div class="rubric-card__head"><span>PHP OOP</span><strong>40 poin</strong></div>
                     <ul class="checklist">
-                        <li><b>Class &amp; Object:</b> 13 class/interface di <code>src/</code></li>
+                        <li><b>Class &amp; Object:</b> 14 class/interface di <code>src/</code> (termasuk <code>AuthService</code>)</li>
                         <li><b>Encapsulation:</b> properti <code>private</code> + getter/setter bervalidasi</li>
                         <li><b>Inheritance:</b> <code>MediaItem</code> → 3 jenis buku, <code>User</code> → 3 jenis anggota</li>
                         <li><b>Polymorphism:</b> <code>calculateBaseRentalCost()</code>, <code>getDiscountRate()</code>, dll. berbeda per subclass</li>
@@ -957,6 +1127,7 @@ function navClass(string $tab, string $name): string
             <input type="hidden" name="action" value="rent_ebook">
             <input type="hidden" name="return_tab" value="loans">
             <input type="hidden" name="ebook_id" id="rentEbookId">
+            <input type="hidden" name="member_id" id="rentMember" value="<?= $currentUser !== null ? e($currentUser->getId()) : '' ?>">
 
             <div class="rent-head">
                 <div id="rmCover" class="cover cover--sm">
@@ -972,14 +1143,15 @@ function navClass(string $tab, string $name): string
             </div>
 
             <div class="rent-body">
-                <div class="field">
-                    <label for="rentMember">Siapa yang menyewa?</label>
-                    <select id="rentMember" name="member_id">
-                        <?php foreach ($members as $m): ?>
-                            <option value="<?= e($m->getId()) ?>"><?= e($m->getName()) ?> — <?= e($m->getTierLabel()) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="muted" id="rentMemberInfo"></small>
+                <div class="rent-account">
+                    <span id="rentUserAvatar" class="avatar avatar--<?= $currentUser !== null ? e($currentUser->getTierCode()) : 'regular' ?>">
+                        <?= $currentUser !== null ? e(memberInitials($currentUser->getName())) : 'A' ?>
+                    </span>
+                    <div class="rent-account__info">
+                        <strong id="rentUserName"><?= $currentUser !== null ? e($currentUser->getName()) : '-' ?></strong>
+                        <small class="muted" id="rentMemberInfo"></small>
+                    </div>
+                    <button type="button" id="btnSwitchAccount" class="btn btn--ghost btn--sm">Ganti akun</button>
                 </div>
 
                 <div class="field">
@@ -1020,6 +1192,99 @@ function navClass(string $tab, string $name): string
         </form>
     </dialog>
 
+    <!-- ===================== MODAL: MASUK / DAFTAR ANGGOTA ===================== -->
+    <dialog id="authModal" class="modal" aria-labelledby="authModalTitle">
+        <div class="modal__inner modal__inner--auth">
+            <button type="button" class="modal__close" data-close-modal aria-label="Tutup">&times;</button>
+
+            <div class="auth-head">
+                <span class="eyebrow">Akun anggota</span>
+                <h2 id="authModalTitle">Masuk ke Arkadia</h2>
+                <p id="authPendingHint" class="auth-pending" hidden></p>
+            </div>
+
+            <div class="auth-tabs" role="tablist" aria-label="Pilih Masuk atau Daftar">
+                <button type="button" class="auth-tab is-active" data-auth-tab="login" role="tab" aria-selected="true">Masuk</button>
+                <button type="button" class="auth-tab" data-auth-tab="register" role="tab" aria-selected="false">Daftar Baru</button>
+            </div>
+
+            <!-- Panel Masuk -->
+            <div id="authPanelLogin" class="auth-panel is-active">
+                <form id="formAuthLogin" method="POST" action="index.php" class="auth-form" novalidate>
+                    <input type="hidden" name="action" value="login_email">
+                    <input type="hidden" name="return_tab" id="authLoginReturn" value="<?= e($tab) ?>">
+                    <input type="hidden" name="pending_book" id="authLoginPending" value="">
+                    <div class="field">
+                        <label for="authLoginEmail">Email terdaftar</label>
+                        <input type="email" id="authLoginEmail" name="email" placeholder="nama@webmail.umm.ac.id" required>
+                        <small class="field__error" id="err-authLoginEmail"></small>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full">Masuk</button>
+                </form>
+
+                <div class="auth-divider"><span>atau coba cepat 1 klik (akun demo)</span></div>
+
+                <div class="demo-grid">
+                    <?php foreach ($demoAccounts as $dm): ?>
+                        <form method="POST" action="index.php" class="demo-form">
+                            <input type="hidden" name="action" value="login_demo">
+                            <input type="hidden" name="member_id" value="<?= e($dm->getId()) ?>">
+                            <input type="hidden" name="return_tab" class="js-return-tab" value="<?= e($tab) ?>">
+                            <input type="hidden" name="pending_book" class="js-pending-book" value="">
+                            <button type="submit" class="demo-btn demo-btn--<?= e($dm->getTierCode()) ?>">
+                                <span class="avatar avatar--xs avatar--<?= e($dm->getTierCode()) ?>"><?= e(memberInitials($dm->getName())) ?></span>
+                                <span class="demo-btn__meta">
+                                    <strong><?= e($dm->getTierLabel()) ?></strong>
+                                    <small><?= e(firstName($dm->getName())) ?> &middot; Diskon <?= (int) round($dm->getDiscountRate() * 100) ?>%</small>
+                                </span>
+                            </button>
+                        </form>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Panel Daftar Baru -->
+            <div id="authPanelRegister" class="auth-panel">
+                <form id="formAuthRegister" method="POST" action="index.php" class="auth-form" novalidate>
+                    <input type="hidden" name="action" value="auth_register">
+                    <input type="hidden" name="return_tab" id="authRegReturn" value="<?= e($tab) ?>">
+                    <input type="hidden" name="pending_book" id="authRegPending" value="">
+
+                    <div class="field">
+                        <label for="authRegName">Nama lengkap</label>
+                        <input type="text" id="authRegName" name="name" placeholder="Contoh: Rania Putri" required minlength="3">
+                        <small class="field__error" id="err-authRegName"></small>
+                    </div>
+                    <div class="field">
+                        <label for="authRegEmail">Email</label>
+                        <input type="email" id="authRegEmail" name="email" placeholder="rania@student.umm.ac.id" required>
+                        <small class="field__error" id="err-authRegEmail"></small>
+                    </div>
+                    <div class="field">
+                        <label for="authRegInst">Kelas / Fakultas</label>
+                        <input type="text" id="authRegInst" name="institution" placeholder="Contoh: Informatika Kelas C — UMM" required minlength="3">
+                        <small class="field__error" id="err-authRegInst"></small>
+                    </div>
+                    <div class="field">
+                        <span class="field__label">Pilih jenis keanggotaan</span>
+                        <div class="radio-cards" role="radiogroup" aria-label="Pilih jenis keanggotaan">
+                            <?php foreach ($tierSamples as $i => $sample): ?>
+                                <label class="radio-card">
+                                    <input type="radio" name="tier" value="<?= e($sample->getTierCode()) ?>" <?= $i === 1 ? 'checked' : '' ?>>
+                                    <span>
+                                        <strong><?= e($sample->getTierLabel()) ?></strong>
+                                        <small>Diskon <?= (int) round($sample->getDiscountRate() * 100) ?>% · maks <?= $sample->getMaxBorrowDays() ?> hari</small>
+                                    </span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full">Daftar &amp; Masuk</button>
+                </form>
+            </div>
+        </div>
+    </dialog>
+
     <footer class="footer">
         <div class="container footer__inner">
             <p><strong>Arkadia</strong> · Prototipe UTS Pemrograman Web Ganjil 2026/2027 · Informatika UMM</p>
@@ -1030,7 +1295,8 @@ function navClass(string $tab, string $name): string
     <script>
         window.ARKADIA_STATE = {
             catalog: <?= json_encode($clientCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>,
-            members: <?= json_encode($clientMembers, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>
+            members: <?= json_encode($clientMembers, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>,
+            currentUser: <?= $currentUser !== null ? json_encode($currentUser->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) : 'null' ?>
         };
     </script>
     <script src="assets/js/app.js"></script>

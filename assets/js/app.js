@@ -2,15 +2,15 @@
  * ARKADIA — Interaksi halaman (Vanilla JavaScript, tanpa framework)
  *  1. Tema terang/gelap
  *  2. Navigasi antar halaman (tanpa reload)
- *  3. Pencarian & filter katalog
- *  4. Modal detail buku
- *  5. Modal sewa + kalkulasi biaya real-time via fetch() ke PHP
- *  6. Pratinjau sampul saat menambah buku
- *  7. Validasi form di sisi klien
+ *  3. Autentikasi anggota (Masuk / Daftar / Akun Demo)
+ *  4. Pencarian & filter katalog + filter peminjaman (Saya vs Semua)
+ *  5. Modal detail buku
+ *  6. Modal sewa + kalkulasi biaya real-time via fetch() ke PHP
+ *  7. Pratinjau sampul saat menambah buku & validasi form
  *  8. Notifikasi (toast)
  */
 document.addEventListener('DOMContentLoaded', () => {
-    const state = window.ARKADIA_STATE || { catalog: [], members: [] };
+    const state = window.ARKADIA_STATE || { catalog: [], members: [], currentUser: null };
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
     const rupiah = (n) => 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
@@ -18,10 +18,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const findMember = (id) => state.members.find((m) => m.id === id);
     const typeShort = (code) => ({ academic: 'Akademik', interactive: 'Interaktif' }[code] || 'Umum');
     const shortAuthor = (a) => String(a).split(/\s*(?:&|,)\s*/)[0];
+    const shortClass = (fqcn) => String(fqcn).split('\\').pop();
     const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const formatTanggal = (iso) => {
         const d = new Date(iso + 'T00:00:00');
         return isNaN(d) ? iso : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    };
+    const initials = (name) => {
+        const clean = String(name).replace(/^(Dr\.|Prof\.|Ir\.)\s+/i, '').replace(/,.*$/, '').trim();
+        return clean.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('') || 'A';
     };
 
     /* ---------- 8. Toast ---------- */
@@ -35,18 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
         $('.toast__close', el)?.addEventListener('click', () => dismissToast(el));
         setTimeout(() => dismissToast(el), 6500);
     }
-    function toast(title, message, type = 'info') {
-        const el = document.createElement('div');
-        el.className = `toast toast--${type}`;
-        el.setAttribute('role', 'status');
-        el.innerHTML = `<span class="toast__icon" aria-hidden="true">${type === 'error' ? '!' : '✓'}</span>
-            <div class="toast__body"><strong></strong><p></p></div>
-            <button type="button" class="toast__close" aria-label="Tutup notifikasi">&times;</button>`;
-        $('strong', el).textContent = title;
-        $('p', el).textContent = message;
-        toastStack.appendChild(el);
-        bindToast(el);
-    }
     $$('.toast', toastStack).forEach(bindToast);
 
     /* ---------- 1. Tema ---------- */
@@ -59,8 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ---------- 2. Navigasi halaman ---------- */
     const pages = $$('.page');
     const navLinks = $$('.nav-link[data-page]');
+    let currentTab = (new URLSearchParams(window.location.search)).get('tab') || 'home';
+
     function showPage(name) {
         if (!$(`#page-${name}`)) return;
+        currentTab = name;
         pages.forEach((p) => p.classList.toggle('is-active', p.id === `page-${name}`));
         navLinks.forEach((b) => {
             const active = b.dataset.page === name;
@@ -79,7 +75,59 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    /* ---------- 3. Pencarian & filter katalog ---------- */
+    /* ---------- Modal umum ---------- */
+    $$('dialog.modal').forEach((dlg) => {
+        dlg.addEventListener('click', (ev) => { if (ev.target === dlg) dlg.close(); });
+        $$('[data-close-modal]', dlg).forEach((btn) => btn.addEventListener('click', () => dlg.close()));
+    });
+
+    /* ---------- 3. Modal Masuk / Daftar Anggota ---------- */
+    const authModal = $('#authModal');
+    const authTabs = $$('.auth-tab[data-auth-tab]');
+    const authPendingHint = $('#authPendingHint');
+
+    function setAuthTab(tabName) {
+        const isReg = tabName === 'register';
+        authTabs.forEach((t) => {
+            const active = t.dataset.authTab === tabName;
+            t.classList.toggle('is-active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        $('#authPanelLogin')?.classList.toggle('is-active', !isReg);
+        $('#authPanelRegister')?.classList.toggle('is-active', isReg);
+        $('#authModalTitle').textContent = isReg ? 'Daftar Anggota Baru' : 'Masuk ke Arkadia';
+    }
+
+    function openAuth(tabName = 'login', pendingBookId = '') {
+        if (!authModal) return;
+        setAuthTab(tabName);
+        const returnTab = pendingBookId ? 'catalog' : currentTab;
+        const book = pendingBookId ? findBook(pendingBookId) : null;
+
+        $('#authLoginPending').value = pendingBookId || '';
+        $('#authRegPending').value = pendingBookId || '';
+        $('#authLoginReturn').value = returnTab;
+        $('#authRegReturn').value = returnTab;
+        $$('.js-pending-book').forEach((el) => { el.value = pendingBookId || ''; });
+        $$('.js-return-tab').forEach((el) => { el.value = returnTab; });
+
+        if (book) {
+            authPendingHint.hidden = false;
+            authPendingHint.textContent = `Setelah masuk, lanjut menyewa: "${book.title}"`;
+        } else {
+            authPendingHint.hidden = true;
+            authPendingHint.textContent = '';
+        }
+
+        authModal.showModal();
+    }
+
+    authTabs.forEach((t) => t.addEventListener('click', () => setAuthTab(t.dataset.authTab)));
+    $$('[data-open-auth]').forEach((btn) => {
+        btn.addEventListener('click', () => openAuth(btn.dataset.openAuth || 'login', ''));
+    });
+
+    /* ---------- 4. Pencarian & filter katalog + scope peminjaman ---------- */
     const searchInput = $('#searchInput');
     const typeFilter = $('#typeFilter');
     const availableOnly = $('#availableOnly');
@@ -124,6 +172,34 @@ document.addEventListener('DOMContentLoaded', () => {
         applyFilters();
     });
 
+    /* Filter Peminjaman saya vs Semua anggota */
+    const scopeTabs = $$('.scope-tab[data-loan-scope]');
+    scopeTabs.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const scope = btn.dataset.loanScope;
+            const userId = state.currentUser?.id || '';
+            scopeTabs.forEach((t) => t.classList.toggle('is-active', t === btn));
+
+            let activeVisible = 0;
+            $$('#activeLoanList .loan-card').forEach((card) => {
+                const show = scope === 'all' || card.dataset.loanOwner === userId;
+                card.hidden = !show;
+                if (show) activeVisible++;
+            });
+            const emptyMyLoans = $('#emptyMyLoans');
+            if (emptyMyLoans) emptyMyLoans.hidden = activeVisible > 0;
+
+            let histVisible = 0;
+            $$('#historyTableBody tr[data-loan-owner]').forEach((row) => {
+                const show = scope === 'all' || row.dataset.loanOwner === userId;
+                row.hidden = !show;
+                if (show) histVisible++;
+            });
+            const emptyHistRow = $('#emptyMyHistoryRow');
+            if (emptyHistRow) emptyHistRow.hidden = histVisible > 0;
+        });
+    });
+
     /* ---------- Helper sampul ---------- */
     function paintCover(el, book, sizeClass) {
         el.className = `cover cover--${book.cover_theme} ${sizeClass}`;
@@ -132,13 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         $('.cover__author', el).textContent = shortAuthor(book.author);
     }
 
-    /* ---------- Modal umum ---------- */
-    $$('dialog.modal').forEach((dlg) => {
-        dlg.addEventListener('click', (ev) => { if (ev.target === dlg) dlg.close(); });
-        $$('[data-close-modal]', dlg).forEach((btn) => btn.addEventListener('click', () => dlg.close()));
-    });
-
-    /* ---------- 4. Modal detail buku ---------- */
+    /* ---------- 5. Modal detail buku ---------- */
     const bookModal = $('#bookModal');
     let detailBookId = null;
     function openBookDetail(id) {
@@ -168,21 +238,18 @@ document.addEventListener('DOMContentLoaded', () => {
         openRent(detailBookId);
     });
 
-    /* ---------- 5. Modal sewa ---------- */
+    /* ---------- 6. Modal sewa (wajib akun login) ---------- */
     const rentModal = $('#rentModal');
     const rentForm = $('#rentForm');
-    const rentMember = $('#rentMember');
+    const rentMemberInput = $('#rentMember');
     const rentDays = $('#rentDays');
     const rentSubmit = $('#rentSubmit');
     const rentAlert = $('#rentAlert');
     const bill = $('#bill');
     const dayChips = $$('.day-chip');
     let currentBook = null;
-    let preferredMemberId = null;
     let quoteTimer = null;
     let quoteToken = 0;
-
-    const shortClass = (fqcn) => String(fqcn).split('\\').pop();
 
     function currentDays() {
         let d = parseInt(rentDays.value, 10);
@@ -192,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function syncDayChips() {
-        const m = findMember(rentMember.value);
+        const m = state.currentUser;
         const d = currentDays();
         dayChips.forEach((chip) => {
             const v = parseInt(chip.dataset.days, 10);
@@ -241,9 +308,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchQuote() {
-        if (!currentBook) return;
-        const m = findMember(rentMember.value);
-        if (!m) return;
+        const m = state.currentUser;
+        if (!currentBook || !m) return;
         const days = currentDays();
         const token = ++quoteToken;
         bill.classList.add('is-loading');
@@ -262,44 +328,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function refreshRent() {
-        const m = findMember(rentMember.value);
+    function refreshRent(immediate = false) {
+        const m = state.currentUser;
         if (m) {
-            $('#rentMemberInfo').textContent = `${m.tier_label} · maks ${m.max_borrow_days} hari · sedang pinjam ${m.active_loans}/${m.max_concurrent_loans} buku`;
+            rentMemberInput.value = m.id;
+            $('#rentUserName').textContent = m.name;
+            $('#rentUserAvatar').className = `avatar avatar--${m.tier}`;
+            $('#rentUserAvatar').textContent = initials(m.name);
+            $('#rentMemberInfo').textContent = `${m.tier_label} · maks ${m.max_borrow_days} hari · pinjam ${m.active_loans}/${m.max_concurrent_loans} buku`;
         }
         syncDayChips();
         clearTimeout(quoteTimer);
-        quoteTimer = setTimeout(fetchQuote, 120);
+        if (immediate) {
+            fetchQuote();
+        } else {
+            quoteTimer = setTimeout(fetchQuote, 120);
+        }
     }
 
     function openRent(id) {
         const b = findBook(id);
         if (!b) return;
+        if (!state.currentUser) {
+            openAuth('login', b.id);
+            return;
+        }
         currentBook = b;
         $('#rentEbookId').value = b.id;
         paintCover($('#rmCover'), b, 'cover--sm');
         $('#rmTitle').textContent = b.title;
         $('#rmSub').textContent = `${rupiah(b.daily_rate)} / hari · ${b.media_type_label}`;
 
-        if (preferredMemberId && findMember(preferredMemberId)) {
-            rentMember.value = preferredMemberId;
-        }
-        const m = findMember(rentMember.value);
-        rentDays.value = m ? Math.min(3, m.max_borrow_days) : 3;
+        rentDays.value = Math.min(3, state.currentUser.max_borrow_days);
         rentSubmit.disabled = true;
-        refreshRent();
+        refreshRent(true);
         rentModal.showModal();
     }
 
     $$('[data-rent-book]').forEach((btn) => btn.addEventListener('click', () => openRent(btn.dataset.rentBook)));
-    rentMember?.addEventListener('change', refreshRent);
-    rentDays?.addEventListener('input', refreshRent);
+    $('#btnSwitchAccount')?.addEventListener('click', () => {
+        rentModal.close();
+        openAuth('login', currentBook?.id || '');
+    });
+    rentDays?.addEventListener('input', () => refreshRent(false));
     dayChips.forEach((chip) => chip.addEventListener('click', () => {
         rentDays.value = chip.dataset.days;
-        refreshRent();
+        refreshRent(true);
     }));
-    $('#dayMinus')?.addEventListener('click', () => { rentDays.value = Math.max(1, currentDays() - 1); refreshRent(); });
-    $('#dayPlus')?.addEventListener('click', () => { rentDays.value = Math.min(30, currentDays() + 1); refreshRent(); });
+    $('#dayMinus')?.addEventListener('click', () => { rentDays.value = Math.max(1, currentDays() - 1); refreshRent(true); });
+    $('#dayPlus')?.addEventListener('click', () => { rentDays.value = Math.min(30, currentDays() + 1); refreshRent(true); });
 
     rentForm?.addEventListener('submit', (ev) => {
         if (rentSubmit.disabled) {
@@ -311,24 +388,24 @@ document.addEventListener('DOMContentLoaded', () => {
         rentSubmit.textContent = 'Memproses...';
     });
 
-    /* Tombol "Sewakan buku" di kartu anggota */
-    const rentingFor = $('#rentingFor');
-    $$('[data-rent-for]').forEach((btn) => btn.addEventListener('click', () => {
-        const m = findMember(btn.dataset.rentFor);
-        if (!m) return;
-        preferredMemberId = m.id;
-        rentMember.value = m.id;
-        $('#rentingForName').textContent = m.name;
-        rentingFor.hidden = false;
-        showPage('catalog');
-        toast('Pilih buku', `Klik "Sewa" pada buku yang ingin disewa untuk ${m.name}.`, 'info');
-    }));
-    $('#btnClearRentingFor')?.addEventListener('click', () => {
-        preferredMemberId = null;
-        rentingFor.hidden = true;
-    });
+    /* Auto-buka modal sewa/auth sesuai query URL setelah login/register */
+    const bootParams = new URLSearchParams(window.location.search);
+    const bootRentId = bootParams.get('rent');
+    const bootAuthTab = bootParams.get('auth');
+    if (bootRentId || bootAuthTab) {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('rent');
+        cleanUrl.searchParams.delete('auth');
+        history.replaceState(null, '', cleanUrl);
 
-    /* ---------- 6. Pratinjau sampul (Tambah Buku) ---------- */
+        if (bootAuthTab) {
+            openAuth(bootAuthTab === 'register' ? 'register' : 'login', bootRentId || '');
+        } else if (bootRentId && state.currentUser && findBook(bootRentId)) {
+            openRent(bootRentId);
+        }
+    }
+
+    /* ---------- 7. Pratinjau sampul & validasi form ---------- */
     const previewCover = $('#previewCover');
     const ebookTitle = $('#ebookTitle');
     const ebookAuthor = $('#ebookAuthor');
@@ -350,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
     $$('input[name="cover_theme"]').forEach((r) => r.addEventListener('change', updatePreview));
     updatePreview();
 
-    /* ---------- 7. Validasi form ---------- */
     function setError(input, errId, message) {
         const err = document.getElementById(errId);
         input.classList.toggle('is-invalid', Boolean(message));
@@ -358,14 +434,38 @@ document.addEventListener('DOMContentLoaded', () => {
         return !message;
     }
 
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    $('#formAuthLogin')?.addEventListener('submit', (ev) => {
+        const email = $('#authLoginEmail');
+        if (!setError(email, 'err-authLoginEmail', emailPattern.test(email.value.trim()) ? '' : 'Masukkan email yang valid.')) {
+            ev.preventDefault();
+            email.focus();
+        }
+    });
+
+    $('#formAuthRegister')?.addEventListener('submit', (ev) => {
+        const name = $('#authRegName');
+        const email = $('#authRegEmail');
+        const inst = $('#authRegInst');
+        const results = [
+            setError(name, 'err-authRegName', name.value.trim().length < 3 ? 'Nama minimal 3 huruf.' : ''),
+            setError(email, 'err-authRegEmail', emailPattern.test(email.value.trim()) ? '' : 'Format email belum benar.'),
+            setError(inst, 'err-authRegInst', inst.value.trim().length < 3 ? 'Kelas / fakultas wajib diisi.' : ''),
+        ];
+        if (results.includes(false)) {
+            ev.preventDefault();
+            $('.is-invalid', ev.target)?.focus();
+        }
+    });
+
     $('#formRegisterMember')?.addEventListener('submit', (ev) => {
         const name = $('#memberName');
         const email = $('#memberEmail');
         const inst = $('#memberInstitution');
-        const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
         const results = [
             setError(name, 'err-memberName', name.value.trim().length < 3 ? 'Nama minimal 3 huruf.' : ''),
-            setError(email, 'err-memberEmail', emailOk ? '' : 'Format email belum benar.'),
+            setError(email, 'err-memberEmail', emailPattern.test(email.value.trim()) ? '' : 'Format email belum benar.'),
             setError(inst, 'err-memberInstitution', inst.value.trim().length < 3 ? 'Kelas / fakultas wajib diisi.' : ''),
         ];
         if (results.includes(false)) {
@@ -391,7 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    /* Hapus tanda error saat pengguna mulai mengetik */
     $$('.field input, .field textarea').forEach((input) => {
         input.addEventListener('input', () => {
             if (!input.classList.contains('is-invalid')) return;

@@ -44,6 +44,7 @@ class OopInspectorService
             RentableInterface::class,
             SerializableEntityInterface::class,
             LibraryManager::class,
+            AuthService::class,
             JsonStorageService::class,
         ];
 
