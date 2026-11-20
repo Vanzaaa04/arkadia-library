@@ -1,0 +1,9 @@
+# Soal PDF / aset lokal non-kode
+*.pdf
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

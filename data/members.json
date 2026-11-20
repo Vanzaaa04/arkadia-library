@@ -1,0 +1,42 @@
+[
+    {
+        "id": "MBR-01",
+        "member_code": "ARK-2026-001",
+        "name": "Aurelia Prameswari, M.Kom.",
+        "email": "aurelia.prameswari@umm.ac.id",
+        "institution": "Fakultas Teknik Informatika — UMM",
+        "joined_date": "2026-02-14",
+        "active_loans": 1,
+        "tier": "faculty"
+    },
+    {
+        "id": "MBR-02",
+        "member_code": "ARK-2026-002",
+        "name": "Raka Aditya Mahendra",
+        "email": "raka.mahendra@student.umm.ac.id",
+        "institution": "Informatika Kelas C — UMM",
+        "joined_date": "2026-03-01",
+        "active_loans": 1,
+        "tier": "premium"
+    },
+    {
+        "id": "MBR-03",
+        "member_code": "ARK-2026-003",
+        "name": "Nadine Kusuma Wardhani",
+        "email": "nadine.wardhani@webmail.umm.ac.id",
+        "institution": "Informatika Kelas D — UMM",
+        "joined_date": "2026-04-10",
+        "active_loans": 1,
+        "tier": "regular"
+    },
+    {
+        "id": "MBR-04",
+        "member_code": "ARK-2026-004",
+        "name": "Dimas Setiawan Prakoso",
+        "email": "dimas.prakoso@alumni.umm.ac.id",
+        "institution": "Software Engineer — Malang Tech Hub",
+        "joined_date": "2026-05-19",
+        "active_loans": 0,
+        "tier": "premium"
+    }
+]
