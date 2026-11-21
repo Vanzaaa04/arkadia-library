@@ -1,5 +1,13 @@
 # ARKADIA — Digital E-Book Lending & Storefront
 
+## Identitas Penyusun
+
+| Nama Lengkap | NIM | Peran |
+| :--- | :--- | :--- |
+| **Ariel Ardiansyah** | `202410370110434` | **Ketua** |
+| Lalu Irgi Nabil Farhan | `202410370110404` | Anggota |
+| Faris Ramadhan Riyanto | `202410370110402` | Anggota |
+
 Prototipe web interaktif manajemen katalog dan transaksi penyewaan e-book untuk **UTS Pemrograman Web Semester Ganjil 2026/2027** (Program Studi Informatika — Fakultas Teknik Universitas Muhammadiyah Malang). Dibangun menggunakan **HTML5 Semantik, CSS3, Vanilla ES6 JavaScript**, dan **PHP 8.x OOP murni tanpa framework** dengan penyimpanan **JSON & ekspor XML**.
 
 ## Pemenuhan Rubrik Penilaian UTS (100 Poin)
