@@ -21,7 +21,7 @@ use App\Support\ViewHelper;
                     Diskon hingga 30% aktif otomatis untuk Anggota Premium dan Dosen.
                 </p>
                 <div class="hero-cta">
-                    <button type="button" class="btn btn--primary btn--lg" data-goto="catalog">
+                    <button type="button" class="btn btn--primary btn--lg hero-cta__primary" data-goto="catalog">
                         Jelajahi Katalog
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
                     </button>
@@ -32,18 +32,53 @@ use App\Support\ViewHelper;
                     <?php endif; ?>
                 </div>
                 <dl class="hero-metrics">
-                    <div><dt>Koleksi Kurasi</dt><dd><?= (int) $metrics['total_titles'] ?> Judul</dd></div>
-                    <div><dt>Anggota Aktif</dt><dd><?= (int) $metrics['total_members'] ?> Akun</dd></div>
-                    <div><dt>Sedang Dipinjam</dt><dd><?= (int) $metrics['active_loans'] ?> Buku</dd></div>
+                    <div><dt>Koleksi Kurasi</dt><dd><span class="js-count" data-count="<?= (int) $metrics['total_titles'] ?>"><?= (int) $metrics['total_titles'] ?></span> Judul</dd></div>
+                    <div><dt>Anggota Aktif</dt><dd><span class="js-count" data-count="<?= (int) $metrics['total_members'] ?>"><?= (int) $metrics['total_members'] ?></span> Akun</dd></div>
+                    <div><dt>Sedang Dipinjam</dt><dd><span class="js-count" data-count="<?= (int) $metrics['active_loans'] ?>"><?= (int) $metrics['active_loans'] ?></span> Buku</dd></div>
                 </dl>
             </div>
 
-            <div class="hero-showcase" aria-hidden="true">
-                <?php foreach ($heroBooks as $i => $hb): ?>
-                    <div class="hero-showcase__item hero-showcase__item--<?= $i + 1 ?>">
-                        <?= ViewHelper::renderCover($hb, 'cover--hero') ?>
+            <?php
+            $deckSlots = ['left', 'center', 'right'];
+            $initialCenterIdx = count($heroBooks) >= 3 ? 1 : 0;
+            $initialBook = $heroBooks[$initialCenterIdx] ?? ($heroBooks[0] ?? null);
+            ?>
+            <div class="hero-stage" id="heroStage">
+                <div class="hero-showcase" id="heroShowcase" role="region" aria-label="Koleksi buku sorotan">
+                    <span class="hero-showcase__glow" aria-hidden="true"></span>
+                    <?php foreach ($heroBooks as $i => $hb): ?>
+                        <button type="button"
+                                class="hero-showcase__item"
+                                data-hero-idx="<?= $i ?>"
+                                data-slot="<?= $deckSlots[$i] ?? 'center' ?>"
+                                data-hero-book="<?= ViewHelper::e($hb->getId()) ?>"
+                                data-hero-title="<?= ViewHelper::e($hb->getTitle()) ?>"
+                                data-hero-price="<?= ViewHelper::e(ViewHelper::formatRupiah($hb->getDailyRate())) ?>/hari"
+                                aria-label="Sorotan: <?= ViewHelper::e($hb->getTitle()) ?>">
+                            <span class="hero-float hero-float--<?= $i + 1 ?>">
+                                <?= ViewHelper::renderCover($hb, 'cover--hero') ?>
+                            </span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+                <?php if ($initialBook !== null): ?>
+                    <div class="hero-deck-bar">
+                        <button type="button" class="hero-deck-info" id="heroDeckOpen">
+                            <strong id="heroDeckTitle"><?= ViewHelper::e($initialBook->getTitle()) ?></strong>
+                            <span id="heroDeckMeta"><?= ViewHelper::e(ViewHelper::formatRupiah($initialBook->getDailyRate())) ?>/hari &middot; Klik sampul untuk detail</span>
+                        </button>
+                        <div class="hero-deck-dots" role="tablist" aria-label="Pilih buku sorotan">
+                            <?php foreach ($heroBooks as $i => $hb): ?>
+                                <button type="button"
+                                        class="hero-deck-dot <?= $i === $initialCenterIdx ? 'is-active' : '' ?>"
+                                        data-hero-dot="<?= $i ?>"
+                                        role="tab"
+                                        aria-selected="<?= $i === $initialCenterIdx ? 'true' : 'false' ?>"
+                                        aria-label="Pilih <?= ViewHelper::e($hb->getTitle()) ?>"></button>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
-                <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -61,7 +96,7 @@ use App\Support\ViewHelper;
 
     <div class="container home-body">
         <!-- Koleksi Pilihan -->
-        <section class="section-block" aria-labelledby="featuredTitle">
+        <section class="section-block" data-reveal aria-labelledby="featuredTitle">
             <div class="section-head section-head--row">
                 <div>
                     <h2 id="featuredTitle">Koleksi Pilihan Minggu Ini</h2>
@@ -77,12 +112,12 @@ use App\Support\ViewHelper;
         </section>
 
         <!-- Cara Pakai Editorial Hairline Steps -->
-        <section id="cara-pakai" class="section-block" aria-labelledby="howTitle">
+        <section id="cara-pakai" class="section-block" data-reveal aria-labelledby="howTitle">
             <div class="section-head">
                 <h2 id="howTitle">Mulai Membaca dalam 3 Langkah</h2>
                 <p>Jelajah katalog secara bebas, lalu masuk atau daftar saat ingin menyewa.</p>
             </div>
-            <ol class="steps-editorial">
+            <ol class="steps-editorial" data-reveal>
                 <li>
                     <span class="step-num">01</span>
                     <h3>Daftar atau Masuk</h3>
@@ -102,12 +137,12 @@ use App\Support\ViewHelper;
         </section>
 
         <!-- Paket Keanggotaan -->
-        <section class="section-block" aria-labelledby="tierTitle">
+        <section class="section-block" data-reveal aria-labelledby="tierTitle">
             <div class="section-head">
                 <h2 id="tierTitle">Paket Keanggotaan</h2>
                 <p>Hak diskon, batas durasi, dan kuota pinjaman mengikuti tipe akun Anda.</p>
             </div>
-            <div class="tier-grid">
+            <div class="tier-grid" data-reveal>
                 <?php foreach ($tierSamples as $sample): ?>
                     <?php $isPopular = $sample->getTierCode() === 'premium'; ?>
                     <article class="tier-card tier-card--<?= ViewHelper::e($sample->getTierCode()) ?>">

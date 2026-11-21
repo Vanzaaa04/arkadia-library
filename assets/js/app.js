@@ -53,8 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = $$('.nav-link[data-page]');
     let currentTab = (new URLSearchParams(window.location.search)).get('tab') || 'home';
 
+    let revealActivePage = () => {};
     function showPage(name) {
-        if (!$(`#page-${name}`)) return;
+        const target = $(`#page-${name}`);
+        if (!target) return;
         currentTab = name;
         pages.forEach((p) => p.classList.toggle('is-active', p.id === `page-${name}`));
         navLinks.forEach((b) => {
@@ -65,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = new URL(window.location.href);
         url.searchParams.set('tab', name);
         history.replaceState(null, '', url);
+        revealActivePage(target);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     $$('[data-page], [data-goto]').forEach((el) => {
@@ -175,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         catalogEmpty.hidden = visible > 0;
         catalogCount.textContent = visible;
+        revealActivePage(catalogGrid);
     }
 
     function setActiveCategoryChip(cat) {
@@ -704,4 +708,161 @@ document.addEventListener('DOMContentLoaded', () => {
             if (err) err.textContent = '';
         });
     });
+
+    /* ---------- 9. Animasi Hero Book Deck, Parallax, Count-Up, Topbar, & Scroll Reveal ---------- */
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const topbar = $('.topbar');
+    const syncTopbarShadow = () => topbar?.classList.toggle('is-scrolled', window.scrollY > 12);
+    window.addEventListener('scroll', syncTopbarShadow, { passive: true });
+    syncTopbarShadow();
+
+    /* Interactive 3D Hero Spotlight Deck */
+    const heroStage = $('#heroStage');
+    const heroShowcase = $('#heroShowcase');
+    const heroItems = $$('[data-hero-idx]', heroShowcase || document);
+    const heroDots = $$('[data-hero-dot]', heroStage || document);
+    const heroDeckTitle = $('#heroDeckTitle');
+    const heroDeckMeta = $('#heroDeckMeta');
+    const heroDeckOpen = $('#heroDeckOpen');
+
+    if (heroShowcase && heroItems.length > 0) {
+        let activeHeroIdx = heroItems.length >= 3 ? 1 : 0;
+        let heroPaused = false;
+        let heroTimer = null;
+
+        function applyHeroDeck(centerIdx) {
+            const len = heroItems.length;
+            activeHeroIdx = ((centerIdx % len) + len) % len;
+            const slotMap = len === 1 ? ['center'] : len === 2 ? ['center', 'right'] : ['center', 'right', 'left'];
+
+            heroItems.forEach((item, idx) => {
+                const offset = (idx - activeHeroIdx + len) % len;
+                const slot = slotMap[offset] || 'center';
+                item.setAttribute('data-slot', slot);
+                item.setAttribute('aria-pressed', slot === 'center' ? 'true' : 'false');
+            });
+
+            heroDots.forEach((dot, idx) => {
+                const on = idx === activeHeroIdx;
+                dot.classList.toggle('is-active', on);
+                dot.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+
+            const activeItem = heroItems[activeHeroIdx];
+            if (activeItem && heroDeckTitle && heroDeckMeta) {
+                heroDeckTitle.textContent = activeItem.dataset.heroTitle || '';
+                heroDeckMeta.textContent = `${activeItem.dataset.heroPrice || ''} · Klik sampul untuk detail`;
+            }
+        }
+
+        function resetHeroTimer() {
+            clearInterval(heroTimer);
+            if (reduceMotion || heroItems.length < 2) return;
+            heroTimer = setInterval(() => {
+                if (heroPaused || currentTab !== 'home' || $('dialog.modal[open]')) return;
+                applyHeroDeck(activeHeroIdx + 1);
+            }, 4200);
+        }
+
+        heroItems.forEach((item) => {
+            item.addEventListener('click', () => {
+                if (item.getAttribute('data-slot') === 'center') {
+                    openBookDetail(item.dataset.heroBook);
+                } else {
+                    applyHeroDeck(Number(item.dataset.heroIdx));
+                    resetHeroTimer();
+                }
+            });
+        });
+
+        heroDots.forEach((dot) => {
+            dot.addEventListener('click', () => {
+                applyHeroDeck(Number(dot.dataset.heroDot));
+                resetHeroTimer();
+            });
+        });
+
+        heroDeckOpen?.addEventListener('click', () => {
+            const activeItem = heroItems[activeHeroIdx];
+            if (activeItem) openBookDetail(activeItem.dataset.heroBook);
+        });
+
+        heroStage?.addEventListener('mouseenter', () => { heroPaused = true; });
+        heroStage?.addEventListener('mouseleave', () => { heroPaused = false; });
+        heroStage?.addEventListener('focusin', () => { heroPaused = true; });
+        heroStage?.addEventListener('focusout', () => { heroPaused = false; });
+
+        if (!reduceMotion) {
+            heroShowcase.addEventListener('pointermove', (ev) => {
+                if (ev.pointerType !== 'mouse') return;
+                const rect = heroShowcase.getBoundingClientRect();
+                const dx = ((ev.clientX - rect.left) / rect.width - 0.5) * 2;
+                const dy = ((ev.clientY - rect.top) / rect.height - 0.5) * 2;
+                heroShowcase.style.setProperty('--tilt-y', `${(dx * 6).toFixed(2)}deg`);
+                heroShowcase.style.setProperty('--tilt-x', `${(-dy * 5).toFixed(2)}deg`);
+            });
+            heroShowcase.addEventListener('pointerleave', () => {
+                heroShowcase.style.setProperty('--tilt-y', '0deg');
+                heroShowcase.style.setProperty('--tilt-x', '0deg');
+            });
+        }
+
+        applyHeroDeck(activeHeroIdx);
+        resetHeroTimer();
+    }
+
+    /* Count-up ringan untuk angka statistik di Hero */
+    if (!reduceMotion) {
+        $$('.js-count[data-count]').forEach((el) => {
+            const target = parseInt(el.dataset.count || '0', 10);
+            if (!target || target <= 0) return;
+            const duration = 680;
+            const start = performance.now();
+            el.textContent = '0';
+            function step(now) {
+                const p = Math.min(1, (now - start) / duration);
+                const eased = 1 - Math.pow(1 - p, 3);
+                el.textContent = String(Math.round(target * eased));
+                if (p < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        });
+    }
+
+    /* Safe Scroll Reveal (IntersectionObserver + fallback per halaman) */
+    if (!reduceMotion && 'IntersectionObserver' in window) {
+        $$('.book-card, .tier-card, .member-card, .loan-card, .rubric-card').forEach((el, idx) => {
+            if (!el.hasAttribute('data-reveal')) {
+                el.setAttribute('data-reveal', '');
+                el.style.setProperty('--reveal-delay', `${(idx % 5) * 35}ms`);
+            }
+        });
+
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-revealed');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.01, rootMargin: '140px 0px 140px 0px' });
+
+        revealActivePage = (scope = document) => {
+            const targets = $$('[data-reveal]', scope);
+            const vh = window.innerHeight || 900;
+            const isTabSwitch = scope instanceof Element && scope.id !== 'page-home';
+            targets.forEach((el) => {
+                const rect = el.getBoundingClientRect();
+                if (rect.height > 0 && (isTabSwitch || rect.top < vh + 140)) {
+                    el.classList.add('is-revealed');
+                    revealObserver.unobserve(el);
+                } else if (!el.classList.contains('is-revealed')) {
+                    revealObserver.observe(el);
+                }
+            });
+        };
+
+        document.documentElement.classList.add('js-motion');
+        revealActivePage($('.page.is-active') || document);
+    }
 });
