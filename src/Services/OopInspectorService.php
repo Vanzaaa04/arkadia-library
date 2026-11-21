@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Contracts\RentableInterface;
 use App\Contracts\SerializableEntityInterface;
+use App\Controllers\RequestController;
 use App\Models\AcademicMonograph;
 use App\Models\FacultyMember;
 use App\Models\InteractiveMediaBook;
@@ -15,6 +16,7 @@ use App\Models\RegularMember;
 use App\Models\StandardEBook;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Support\ViewHelper;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;
@@ -46,6 +48,8 @@ class OopInspectorService
             LibraryManager::class,
             AuthService::class,
             JsonStorageService::class,
+            RequestController::class,
+            ViewHelper::class,
         ];
 
         $report = [];
@@ -85,6 +89,8 @@ class OopInspectorService
                 $ref->isInterface() => 'Contract / Interface',
                 $ref->isAbstract() => 'Abstract Base Class',
                 $parent !== false => 'Polymorphic Subclass',
+                str_contains($ref->getNamespaceName(), 'Controllers') => 'HTTP Controller',
+                str_contains($ref->getNamespaceName(), 'Support') => 'View Helper',
                 str_contains($ref->getNamespaceName(), 'Services') => 'Domain Service',
                 default => 'Domain Entity',
             };

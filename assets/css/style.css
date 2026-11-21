@@ -957,7 +957,7 @@ html[data-theme="dark"] .icon-moon { display: none; }
 .checklist code { font-size: .75rem; }
 #page-system .table-card { margin-bottom: 44px; }
 
-.reflection-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.reflection-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-items: start; }
 .reflection-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow-sm); }
 .reflection-card summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; cursor: pointer; list-style: none; }
 .reflection-card summary::-webkit-details-marker { display: none; }
