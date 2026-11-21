@@ -5,6 +5,40 @@ declare(strict_types=1);
 use App\Support\ViewHelper;
 ?>
 <!-- ===================== HALAMAN: BERANDA ===================== -->
+<?php
+$teamMembers = [
+    [
+        'id' => 'faris',
+        'name' => 'Faris Ramadhan Riyanto',
+        'nim' => '202410370110402',
+        'role' => 'Anggota',
+        'is_leader' => false,
+        'focus' => 'Modular Views & UI Component Architecture',
+        'photo' => 'assets/img/team/faris.jpg',
+    ],
+    [
+        'id' => 'ariel',
+        'name' => 'Ariel Ardiansyah',
+        'nim' => '202410370110434',
+        'role' => 'Ketua Tim',
+        'is_leader' => true,
+        'focus' => 'Lead Full-Stack & PHP 8.x OOP Architecture',
+        'photo' => 'assets/img/team/ariel.jpg',
+    ],
+    [
+        'id' => 'irgi',
+        'name' => 'Lalu Irgi Nabil Farhan',
+        'nim' => '202410370110404',
+        'role' => 'Anggota',
+        'is_leader' => false,
+        'focus' => 'Catalog Data Modeling, E-Reader & QA',
+        'photo' => 'assets/img/team/irgi.jpg',
+    ],
+];
+$deckSlots = ['left', 'center', 'right'];
+$initialCenterIdx = count($heroBooks) >= 3 ? 1 : 0;
+$initialBook = $heroBooks[$initialCenterIdx] ?? ($heroBooks[0] ?? null);
+?>
 <section id="page-home" class="page <?= $tab === 'home' ? 'is-active' : '' ?>" aria-labelledby="homeTitle">
     <!-- Full-bleed Espresso Brand Hero -->
     <div class="hero-banner">
@@ -38,47 +72,91 @@ use App\Support\ViewHelper;
                 </dl>
             </div>
 
-            <?php
-            $deckSlots = ['left', 'center', 'right'];
-            $initialCenterIdx = count($heroBooks) >= 3 ? 1 : 0;
-            $initialBook = $heroBooks[$initialCenterIdx] ?? ($heroBooks[0] ?? null);
-            ?>
             <div class="hero-stage" id="heroStage">
-                <div class="hero-showcase" id="heroShowcase" role="region" aria-label="Koleksi buku sorotan">
-                    <span class="hero-showcase__glow" aria-hidden="true"></span>
-                    <?php foreach ($heroBooks as $i => $hb): ?>
-                        <button type="button"
-                                class="hero-showcase__item"
-                                data-hero-idx="<?= $i ?>"
-                                data-slot="<?= $deckSlots[$i] ?? 'center' ?>"
-                                data-hero-book="<?= ViewHelper::e($hb->getId()) ?>"
-                                data-hero-title="<?= ViewHelper::e($hb->getTitle()) ?>"
-                                data-hero-price="<?= ViewHelper::e(ViewHelper::formatRupiah($hb->getDailyRate())) ?>/hari"
-                                aria-label="Sorotan: <?= ViewHelper::e($hb->getTitle()) ?>">
-                            <span class="hero-float hero-float--<?= $i + 1 ?>">
-                                <?= ViewHelper::renderCover($hb, 'cover--hero') ?>
-                            </span>
-                        </button>
-                    <?php endforeach; ?>
+                <div class="hero-mode-switch" role="tablist" aria-label="Tampilan sorotan beranda">
+                    <button type="button" class="hero-mode-btn is-active" data-hero-mode="team" role="tab" aria-selected="true">Tim Penyusun</button>
+                    <button type="button" class="hero-mode-btn" data-hero-mode="books" role="tab" aria-selected="false">Buku Sorotan</button>
                 </div>
-                <?php if ($initialBook !== null): ?>
-                    <div class="hero-deck-bar">
-                        <button type="button" class="hero-deck-info" id="heroDeckOpen">
-                            <strong id="heroDeckTitle"><?= ViewHelper::e($initialBook->getTitle()) ?></strong>
-                            <span id="heroDeckMeta"><?= ViewHelper::e(ViewHelper::formatRupiah($initialBook->getDailyRate())) ?>/hari &middot; Klik sampul untuk detail</span>
-                        </button>
-                        <div class="hero-deck-dots" role="tablist" aria-label="Pilih buku sorotan">
-                            <?php foreach ($heroBooks as $i => $hb): ?>
+
+                <!-- Mode 1: 3D Hero Team Portrait Deck -->
+                <div id="heroTeamPane" class="hero-pane" data-hero-pane="team">
+                    <div class="hero-showcase hero-showcase--team" id="heroTeamShowcase" role="region" aria-label="Sorotan foto tim penyusun">
+                        <span class="hero-showcase__glow" aria-hidden="true"></span>
+                        <?php foreach ($teamMembers as $i => $tm): ?>
+                            <button type="button"
+                                    class="hero-showcase__item hero-showcase__item--team <?= $tm['is_leader'] ? 'is-leader' : '' ?>"
+                                    data-hero-team-idx="<?= $i ?>"
+                                    data-slot="<?= $deckSlots[$i] ?? 'center' ?>"
+                                    data-member-name="<?= ViewHelper::e($tm['name']) ?>"
+                                    data-member-nim="<?= ViewHelper::e($tm['nim']) ?>"
+                                    data-member-role="<?= ViewHelper::e($tm['role']) ?>"
+                                    aria-label="<?= ViewHelper::e($tm['role'] . ' — ' . $tm['name']) ?>">
+                                <span class="hero-float hero-float--<?= $i + 1 ?>">
+                                    <span class="hero-portrait">
+                                        <img src="<?= ViewHelper::e($tm['photo']) ?>" alt="Foto <?= ViewHelper::e($tm['name']) ?>">
+                                        <span class="hero-portrait__tag <?= $tm['is_leader'] ? 'hero-portrait__tag--leader' : '' ?>"><?= ViewHelper::e($tm['role']) ?></span>
+                                    </span>
+                                </span>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="hero-deck-bar hero-deck-bar--team">
+                        <div class="hero-deck-info" id="heroTeamInfo">
+                            <strong id="heroTeamTitle">Tim Penyusun Arkadia</strong>
+                            <span id="heroTeamMeta">Klik foto untuk lihat Nama, Role &amp; NIM</span>
+                        </div>
+                        <button type="button" id="heroTeamCopy" class="team-copy-btn" data-copy-nim="" hidden>Salin NIM</button>
+                        <div class="hero-deck-dots" role="tablist" aria-label="Pilih anggota tim">
+                            <?php foreach ($teamMembers as $i => $tm): ?>
                                 <button type="button"
-                                        class="hero-deck-dot <?= $i === $initialCenterIdx ? 'is-active' : '' ?>"
-                                        data-hero-dot="<?= $i ?>"
+                                        class="hero-deck-dot <?= $i === 1 ? 'is-active' : '' ?>"
+                                        data-hero-team-dot="<?= $i ?>"
                                         role="tab"
-                                        aria-selected="<?= $i === $initialCenterIdx ? 'true' : 'false' ?>"
-                                        aria-label="Pilih <?= ViewHelper::e($hb->getTitle()) ?>"></button>
+                                        aria-selected="<?= $i === 1 ? 'true' : 'false' ?>"
+                                        aria-label="Pilih <?= ViewHelper::e($tm['name']) ?>"></button>
                             <?php endforeach; ?>
                         </div>
                     </div>
-                <?php endif; ?>
+                </div>
+
+                <!-- Mode 2: 3D Hero Book Spotlight Deck -->
+                <div id="heroBooksPane" class="hero-pane" data-hero-pane="books" hidden>
+                    <div class="hero-showcase" id="heroShowcase" role="region" aria-label="Koleksi buku sorotan">
+                        <span class="hero-showcase__glow" aria-hidden="true"></span>
+                        <?php foreach ($heroBooks as $i => $hb): ?>
+                            <button type="button"
+                                    class="hero-showcase__item"
+                                    data-hero-idx="<?= $i ?>"
+                                    data-slot="<?= $deckSlots[$i] ?? 'center' ?>"
+                                    data-hero-book="<?= ViewHelper::e($hb->getId()) ?>"
+                                    data-hero-title="<?= ViewHelper::e($hb->getTitle()) ?>"
+                                    data-hero-price="<?= ViewHelper::e(ViewHelper::formatRupiah($hb->getDailyRate())) ?>/hari"
+                                    aria-label="Sorotan: <?= ViewHelper::e($hb->getTitle()) ?>">
+                                <span class="hero-float hero-float--<?= $i + 1 ?>">
+                                    <?= ViewHelper::renderCover($hb, 'cover--hero') ?>
+                                </span>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($initialBook !== null): ?>
+                        <div class="hero-deck-bar">
+                            <button type="button" class="hero-deck-info" id="heroDeckOpen">
+                                <strong id="heroDeckTitle"><?= ViewHelper::e($initialBook->getTitle()) ?></strong>
+                                <span id="heroDeckMeta"><?= ViewHelper::e(ViewHelper::formatRupiah($initialBook->getDailyRate())) ?>/hari &middot; Klik sampul untuk detail</span>
+                            </button>
+                            <div class="hero-deck-dots" role="tablist" aria-label="Pilih buku sorotan">
+                                <?php foreach ($heroBooks as $i => $hb): ?>
+                                    <button type="button"
+                                            class="hero-deck-dot <?= $i === $initialCenterIdx ? 'is-active' : '' ?>"
+                                            data-hero-dot="<?= $i ?>"
+                                            role="tab"
+                                            aria-selected="<?= $i === $initialCenterIdx ? 'true' : 'false' ?>"
+                                            aria-label="Pilih <?= ViewHelper::e($hb->getTitle()) ?>"></button>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -194,37 +272,6 @@ use App\Support\ViewHelper;
         </section>
 
         <!-- Tim Penyusun (Interactive Expanding Portrait Gallery) -->
-        <?php
-        $teamMembers = [
-            [
-                'id' => 'faris',
-                'name' => 'Faris Ramadhan Riyanto',
-                'nim' => '202410370110402',
-                'role' => 'Anggota',
-                'is_leader' => false,
-                'focus' => 'Modular Views & UI Component Architecture',
-                'photo' => 'assets/img/team/faris.jpg',
-            ],
-            [
-                'id' => 'ariel',
-                'name' => 'Ariel Ardiansyah',
-                'nim' => '202410370110434',
-                'role' => 'Ketua Tim',
-                'is_leader' => true,
-                'focus' => 'Lead Full-Stack & PHP 8.x OOP Architecture',
-                'photo' => 'assets/img/team/ariel.jpg',
-            ],
-            [
-                'id' => 'irgi',
-                'name' => 'Lalu Irgi Nabil Farhan',
-                'nim' => '202410370110404',
-                'role' => 'Anggota',
-                'is_leader' => false,
-                'focus' => 'Catalog Data Modeling, E-Reader & QA',
-                'photo' => 'assets/img/team/irgi.jpg',
-            ],
-        ];
-        ?>
         <section id="tim-penyusun" class="section-block" data-reveal aria-labelledby="teamTitle">
             <div class="section-head section-head--row">
                 <div>

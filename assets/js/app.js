@@ -766,8 +766,91 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', syncTopbarShadow, { passive: true });
     syncTopbarShadow();
 
-    /* Interactive 3D Hero Spotlight Deck */
+    /* Interactive Dual-Mode Hero Deck (Tim Penyusun 3D Portraits <-> Buku Sorotan) */
     const heroStage = $('#heroStage');
+    const heroModeBtns = $$('[data-hero-mode]', heroStage || document);
+    const heroPanes = $$('[data-hero-pane]', heroStage || document);
+
+    heroModeBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.heroMode;
+            heroModeBtns.forEach((b) => {
+                const on = b.dataset.heroMode === mode;
+                b.classList.toggle('is-active', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            heroPanes.forEach((pane) => {
+                pane.hidden = pane.dataset.heroPane !== mode;
+            });
+        });
+    });
+
+    /* Hero Pane 1: 3D Team Portrait Deck */
+    const heroTeamShowcase = $('#heroTeamShowcase');
+    const heroTeamItems = $$('[data-hero-team-idx]', heroTeamShowcase || document);
+    const heroTeamDots = $$('[data-hero-team-dot]', heroStage || document);
+    const heroTeamTitle = $('#heroTeamTitle');
+    const heroTeamMeta = $('#heroTeamMeta');
+    const heroTeamCopy = $('#heroTeamCopy');
+
+    if (heroTeamShowcase && heroTeamItems.length > 0) {
+        let activeTeamIdx = heroTeamItems.length >= 3 ? 1 : 0;
+
+        function applyHeroTeam(centerIdx, revealIdentity = true) {
+            const len = heroTeamItems.length;
+            activeTeamIdx = ((centerIdx % len) + len) % len;
+            const slotMap = len === 1 ? ['center'] : len === 2 ? ['center', 'right'] : ['center', 'right', 'left'];
+
+            heroTeamItems.forEach((item, idx) => {
+                const offset = (idx - activeTeamIdx + len) % len;
+                const slot = slotMap[offset] || 'center';
+                item.setAttribute('data-slot', slot);
+                item.setAttribute('aria-pressed', slot === 'center' ? 'true' : 'false');
+            });
+
+            heroTeamDots.forEach((dot, idx) => {
+                const on = idx === activeTeamIdx;
+                dot.classList.toggle('is-active', on);
+                dot.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+
+            const activeItem = heroTeamItems[activeTeamIdx];
+            if (revealIdentity && activeItem && heroTeamTitle && heroTeamMeta) {
+                heroTeamTitle.textContent = activeItem.dataset.memberName || '';
+                heroTeamMeta.textContent = `${activeItem.dataset.memberRole || ''} · NIM ${activeItem.dataset.memberNim || ''}`;
+                if (heroTeamCopy) {
+                    heroTeamCopy.dataset.copyNim = activeItem.dataset.memberNim || '';
+                    heroTeamCopy.hidden = false;
+                }
+            }
+        }
+
+        heroTeamItems.forEach((item) => {
+            item.addEventListener('click', () => applyHeroTeam(Number(item.dataset.heroTeamIdx), true));
+        });
+        heroTeamDots.forEach((dot) => {
+            dot.addEventListener('click', () => applyHeroTeam(Number(dot.dataset.heroTeamDot), true));
+        });
+
+        if (!reduceMotion) {
+            heroTeamShowcase.addEventListener('pointermove', (ev) => {
+                if (ev.pointerType !== 'mouse') return;
+                const rect = heroTeamShowcase.getBoundingClientRect();
+                const dx = ((ev.clientX - rect.left) / rect.width - 0.5) * 2;
+                const dy = ((ev.clientY - rect.top) / rect.height - 0.5) * 2;
+                heroTeamShowcase.style.setProperty('--tilt-y', `${(dx * 6).toFixed(2)}deg`);
+                heroTeamShowcase.style.setProperty('--tilt-x', `${(-dy * 5).toFixed(2)}deg`);
+            });
+            heroTeamShowcase.addEventListener('pointerleave', () => {
+                heroTeamShowcase.style.setProperty('--tilt-y', '0deg');
+                heroTeamShowcase.style.setProperty('--tilt-x', '0deg');
+            });
+        }
+
+        applyHeroTeam(activeTeamIdx, false);
+    }
+
+    /* Hero Pane 2: 3D Book Spotlight Deck */
     const heroShowcase = $('#heroShowcase');
     const heroItems = $$('[data-hero-idx]', heroShowcase || document);
     const heroDots = $$('[data-hero-dot]', heroStage || document);
@@ -809,7 +892,8 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(heroTimer);
             if (reduceMotion || heroItems.length < 2) return;
             heroTimer = setInterval(() => {
-                if (heroPaused || currentTab !== 'home' || $('dialog.modal[open]')) return;
+                const booksPane = $('#heroBooksPane');
+                if (heroPaused || currentTab !== 'home' || $('dialog.modal[open]') || booksPane?.hidden) return;
                 applyHeroDeck(activeHeroIdx + 1);
             }, 4200);
         }
@@ -1094,9 +1178,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 ev.stopPropagation();
                 const nim = btn.dataset.copyNim || '';
                 if (!nim) return;
+                const origLabel = btn.dataset.origLabel || btn.textContent;
+                btn.dataset.origLabel = origLabel;
                 navigator.clipboard?.writeText(nim).catch(() => {});
                 btn.textContent = 'Tersalin ✓';
-                setTimeout(() => { btn.textContent = 'Salin'; }, 1400);
+                setTimeout(() => { btn.textContent = origLabel; }, 1400);
             });
         });
     }
