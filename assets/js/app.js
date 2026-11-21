@@ -1039,4 +1039,65 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => ripple.remove(), 580);
         });
     }
+
+    /* ---------- 11. Galeri Tim Penyusun Interaktif (Expanding Portrait Panel) ---------- */
+    const teamPanels = $$('[data-team-panel]');
+    const btnToggleAllTeam = $('#btnToggleAllTeam');
+    if (teamPanels.length > 0) {
+        const syncTeamToggleBtn = () => {
+            if (!btnToggleAllTeam) return;
+            const allOpen = teamPanels.every((p) => p.classList.contains('is-active'));
+            btnToggleAllTeam.setAttribute('aria-pressed', allOpen ? 'true' : 'false');
+            btnToggleAllTeam.textContent = allOpen ? 'Sembunyikan profil' : 'Tampilkan semua profil';
+        };
+
+        const toggleTeamPanel = (panel) => {
+            const willOpen = !panel.classList.contains('is-active');
+            const allWereOpen = teamPanels.every((p) => p.classList.contains('is-active'));
+            if (willOpen && !allWereOpen) {
+                teamPanels.forEach((p) => {
+                    const active = p === panel;
+                    p.classList.toggle('is-active', active);
+                    p.setAttribute('aria-expanded', active ? 'true' : 'false');
+                });
+            } else {
+                panel.classList.toggle('is-active', willOpen);
+                panel.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            }
+            syncTeamToggleBtn();
+        };
+
+        teamPanels.forEach((panel) => {
+            panel.addEventListener('click', (ev) => {
+                if (ev.target.closest('[data-copy-nim]')) return;
+                toggleTeamPanel(panel);
+            });
+            panel.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter' || ev.key === ' ') {
+                    ev.preventDefault();
+                    toggleTeamPanel(panel);
+                }
+            });
+        });
+
+        btnToggleAllTeam?.addEventListener('click', () => {
+            const shouldOpen = btnToggleAllTeam.getAttribute('aria-pressed') !== 'true';
+            teamPanels.forEach((p) => {
+                p.classList.toggle('is-active', shouldOpen);
+                p.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            });
+            syncTeamToggleBtn();
+        });
+
+        $$('[data-copy-nim]').forEach((btn) => {
+            btn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const nim = btn.dataset.copyNim || '';
+                if (!nim) return;
+                navigator.clipboard?.writeText(nim).catch(() => {});
+                btn.textContent = 'Tersalin ✓';
+                setTimeout(() => { btn.textContent = 'Salin'; }, 1400);
+            });
+        });
+    }
 });

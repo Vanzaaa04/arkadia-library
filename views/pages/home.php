@@ -192,5 +192,97 @@ use App\Support\ViewHelper;
                 <?php endforeach; ?>
             </div>
         </section>
+
+        <!-- Tim Penyusun (Interactive Expanding Portrait Gallery) -->
+        <?php
+        $teamMembers = [
+            [
+                'id' => 'faris',
+                'name' => 'Faris Ramadhan Riyanto',
+                'nim' => '202410370110402',
+                'role' => 'Anggota',
+                'is_leader' => false,
+                'focus' => 'Modular Views & UI Component Architecture',
+                'photo' => 'assets/img/team/faris.jpg',
+            ],
+            [
+                'id' => 'ariel',
+                'name' => 'Ariel Ardiansyah',
+                'nim' => '202410370110434',
+                'role' => 'Ketua Tim',
+                'is_leader' => true,
+                'focus' => 'Lead Full-Stack & PHP 8.x OOP Architecture',
+                'photo' => 'assets/img/team/ariel.jpg',
+            ],
+            [
+                'id' => 'irgi',
+                'name' => 'Lalu Irgi Nabil Farhan',
+                'nim' => '202410370110404',
+                'role' => 'Anggota',
+                'is_leader' => false,
+                'focus' => 'Catalog Data Modeling, E-Reader & QA',
+                'photo' => 'assets/img/team/irgi.jpg',
+            ],
+        ];
+        ?>
+        <section id="tim-penyusun" class="section-block" data-reveal aria-labelledby="teamTitle">
+            <div class="section-head section-head--row">
+                <div>
+                    <span class="eyebrow">Informatika UMM &middot; Pemrograman Web</span>
+                    <h2 id="teamTitle">Tim Penyusun Arkadia</h2>
+                    <p>Klik pada foto untuk membuka identitas lengkap, NIM, dan peran masing-masing penyusun.</p>
+                </div>
+                <button type="button" id="btnToggleAllTeam" class="btn btn--ghost btn--sm" aria-pressed="false">
+                    Tampilkan semua profil
+                </button>
+            </div>
+
+            <div class="team-showcase" id="teamShowcase" role="group" aria-label="Galeri interaktif tim penyusun">
+                <?php foreach ($teamMembers as $tm): ?>
+                    <article class="team-panel <?= $tm['is_leader'] ? 'team-panel--leader' : '' ?>"
+                             data-team-panel="<?= ViewHelper::e($tm['id']) ?>"
+                             tabindex="0"
+                             role="button"
+                             aria-expanded="false"
+                             aria-label="Lihat profil <?= ViewHelper::e($tm['name']) ?>">
+                        <img src="<?= ViewHelper::e($tm['photo']) ?>"
+                             alt="Foto <?= ViewHelper::e($tm['name']) ?>"
+                             class="team-panel__img"
+                             loading="lazy">
+                        <div class="team-panel__shade" aria-hidden="true"></div>
+
+                        <div class="team-panel__top">
+                            <span class="team-badge <?= $tm['is_leader'] ? 'team-badge--leader' : '' ?>">
+                                <?= ViewHelper::e($tm['role']) ?>
+                            </span>
+                            <span class="team-panel__trigger" aria-hidden="true">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                            </span>
+                        </div>
+
+                        <div class="team-panel__hint">
+                            <span>Klik untuk lihat Nama &amp; NIM</span>
+                        </div>
+
+                        <div class="team-panel__drawer">
+                            <span class="team-panel__role-kicker">
+                                <?= ViewHelper::e($tm['role']) ?> &middot; Informatika UMM
+                            </span>
+                            <h3 class="team-panel__name"><?= ViewHelper::e($tm['name']) ?></h3>
+                            <div class="team-panel__nim-row">
+                                <code class="team-panel__nim">NIM <?= ViewHelper::e($tm['nim']) ?></code>
+                                <button type="button"
+                                        class="team-copy-btn"
+                                        data-copy-nim="<?= ViewHelper::e($tm['nim']) ?>"
+                                        title="Salin NIM <?= ViewHelper::e($tm['nim']) ?>">
+                                    Salin
+                                </button>
+                            </div>
+                            <p class="team-panel__focus"><?= ViewHelper::e($tm['focus']) ?></p>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </section>
     </div>
 </section>
