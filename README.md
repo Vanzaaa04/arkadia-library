@@ -34,19 +34,42 @@ Sistem membedakan **3 jenis keanggotaan OOP** (`RegularMember`, `PremiumMember`,
 
 > **Cara Masuk / Pindah Akun:** Klik **Masuk** di kanan atas header lalu pilih salah satu dari **3 tombol akun demo 1-klik** (Reguler / Premium / Dosen) atau masukkan email terdaftar di atas; bisa juga buka menu **Anggota** dan klik **Masuk akun ini** pada salah satu dari keempat kartu anggota, atau buat akun baru lewat tombol **Daftar**.
 
-## Alur Penggunaan Web (Step-by-Step)
+## Alur Penggunaan Web (Dari Awal Sampai Akhir)
 
-1. **Eksplorasi Beranda & Katalog** — Pengunjung langsung melihat hero interaktif *Book Deck*, strip kategori, dan galeri **Katalog** (bisa cari judul/penulis, filter jenis media & stok, sortir harga/halaman, dan alih tampilan **Grid ↔ Daftar**).
-2. **Pratinjau Buku di Mini E-Reader** — Klik sampul buku manapun untuk melihat metadata teknis (ISBN/DOI/Audio Sandbox), lalu klik **Baca cuplikan** untuk mencoba mode baca web (*Terang / Sepia / Gelap* dan ukuran font `A−`/`A+`).
-3. **Masuk atau Daftar Anggota** — Saat klik **Sewa** (atau lewat tombol **Masuk / Daftar** di header), pilih akun demo 1-klik, login dengan email, atau daftar akun baru. Jika sebelumnya mengklik **Sewa buku**, modal sewa otomatis terbuka setelah login.
-4. **Simulasi Biaya Real-Time & Sewa** — Pilih durasi (`1`–`21` hari sesuai batas tier). Browser memanggil `fetch('index.php?api=simulate')` sehingga server PHP menghitung biaya sewa pokok, biaya layanan, diskon polimorfik, tanggal jatuh tempo, dan memvalidasi stok/kuota sebelum menyimpan transaksi ke JSON.
-5. **Kelola Peminjaman Aktif & Struk PDF** — Di menu **Peminjaman** (*Pinjaman saya* atau *Semua anggota*), pengguna dapat klik **Baca** (*Lisensi aktif*), memperpanjang durasi **+3 hari** *(divalidasi terhadap batas tier di PHP)*, membuka **Struk Digital** untuk **Cetak / Simpan PDF**, atau klik **Kembalikan** untuk memulihkan stok buku & kuota pinjam.
-6. **Manajemen Data, Info Sistem, & Reset Demo** — Tambahkan judul baru dengan pratinjau sampul langsung di **Tambah Buku**, periksa implementasi **16 class/interface OOP** via *Reflection API* di **Info Sistem**, dan gunakan tombol **Reset** di header kanan atas kapan saja untuk kembali ke data contoh awal.
+Untuk mencoba keseluruhan fitur aplikasi dari awal sampai selesai, ikuti urutan skenario berikut:
+
+1. **Tahap 1 — Mode Pengunjung / Tamu *(Sebelum Masuk)***
+   - Buka **Beranda** untuk melihat *Hero Book Deck 3D* interaktif *(klik buku kiri/kanan untuk memutar sorotan, klik buku tengah untuk melihat detail)* dan strip kategori.
+   - Buka **Katalog** &rarr; uji pencarian, filter kategori/jenis, sortir **Harga Termurah**, dan alih tampilan **Grid &harr; Daftar**.
+   - Klik salah satu sampul buku &rarr; klik **Baca cuplikan** untuk mencoba **Mini E-Reader** (*Terang / Sepia / Gelap*, ukuran font `A−`/`A+`). Jika langsung klik **Sewa**, sistem otomatis mengarahkan ke jendela **Masuk / Daftar**.
+
+2. **Tahap 2 — Uji Akun Reguler *(`Nadine Kusuma Wardhani` / `MBR-03`)***
+   - Klik **Masuk** &rarr; pilih tombol 1-klik **Anggota Reguler**.
+   - Klik **Sewa** pada salah satu buku di Katalog untuk melihat tarif standar (**diskon 0%**, biaya layanan berlaku, pilihan durasi maksimal **7 hari**).
+   - Buka menu **Peminjaman**, lalu klik **+3 hari** pada pinjaman aktif 5 hari milik Nadine &rarr; sistem memunculkan notifikasi validasi OOP bahwa total 8 hari melebihi batas maksimal **7 hari** Anggota Reguler.
+
+3. **Tahap 3 — Pindah ke Akun Premium *(`Raka Aditya Mahendra` / `MBR-02`)***
+   - Buka menu **Anggota** &rarr; klik **Masuk akun ini** pada kartu **Raka Aditya Mahendra** *(atau melalui kapsul profil di kanan atas)*.
+   - Coba klik **Sewa** di Katalog untuk melihat kalkulasi otomatis **diskon 20% + biaya layanan Rp 0 (Gratis)** hingga durasi **14 hari**.
+   - Buka menu **Peminjaman** (tab **Pinjaman saya**) pada buku *Refactoring UI*:
+     - Klik **Baca** (*Lisensi aktif*) untuk membuka naskah tanpa batas pratinjau.
+     - Klik **+3 hari** untuk memperpanjang masa sewa (`7 hari` &rarr; `10 hari`) dan melihat total biaya terhitung ulang secara polimorfik.
+     - Klik **Struk** untuk melihat invoice resmi & token DRM lalu tekan **Cetak / Simpan PDF**.
+     - Klik **Kembalikan** saat selesai untuk memindahkan transaksi ke **Riwayat selesai** sekaligus memulihkan stok buku dan kuota anggota.
+
+4. **Tahap 4 — Uji Akun Dosen & Peneliti *(`Aurelia Prameswari, M.Kom.` / `MBR-01`)***
+   - Pindah akun ke **Aurelia Prameswari, M.Kom.** lewat menu **Anggota** / **Masuk**.
+   - Buka modal **Sewa** dan pilih durasi panjang **21 hari** untuk memverifikasi **diskon subsidi riset 30%** dan kuota maksimal **8 buku**.
+
+5. **Tahap 5 — Tambah Data, Daftar Baru, Info Sistem, & Reset**
+   - Uji **Daftar Anggota Baru** lewat tombol **Daftar** *(atau formulir di menu **Anggota**)* dan **Tambah Buku** dengan pratinjau sampul langsung.
+   - Buka **Info Sistem** untuk mengecek pemenuhan rubrik 100 poin serta daftar **16 class & interface OOP** yang dibaca langsung oleh **PHP Reflection API**.
+   - Terakhir, klik ikon **Reset** di kanan atas header untuk mengembalikan data demo awal (`6` buku, `4` anggota, `4` transaksi).
 
 ## Fitur Utama Aplikasi
 
 - **Beranda Interaktif & Animasi Modern** — *Hero Book Deck* 3D interaktif yang dapat diklik/diputar, *kinetic headline rotator*, *marquee* informasi, kilau sampul saat *hover*, *morphing nav indicator*, serta dukungan `prefers-reduced-motion`.
-- **Katalog Grid, Daftar, Pencarian, & Sortir** — Cari judul/penulis/kategori, filter jenis media & ketersediaan stok, sortir (*Terbaru*, *Harga Termurah*, *Harga Termahal*, *Halaman Terbanyak*), serta alih tampilan **Grid ↔ Daftar**.
+- **Katalog Grid, Daftar, Pencarian, & Sortir** — Cari judul/penulis/kategori, filter jenis media & ketersediaan stok, sortir (*Terbaru*, *Harga Termurah*, *Harga Termahal*, *Halaman Terbanyak*), serta alih tampilan **Grid &harr; Daftar**.
 - **Mini Web E-Reader & Struk Digital Cetak PDF** — Baca cuplikan atau naskah berlisensi penuh (`A−`/`A+`, 3 mode kertas), serta struk resmi lengkap Kode Invoice, Token DRM, rincian polimorfik, dan CSS `@media print`.
 
 ## Arsitektur PHP 8.x OOP (`src/` — 16 Class & Interface)
@@ -91,9 +114,10 @@ Sistem membedakan **3 jenis keanggotaan OOP** (`RegularMember`, `PremiumMember`,
 
 ### Opsi 1 — PHP Built-in Server (Direkomendasikan)
 
-1. Buka terminal (PowerShell / Command Prompt / Git Bash) dan masuk ke folder proyek:
+1. Clone repositori dan masuk ke foldernya:
    ```bash
-   cd "d:\uts\uts web"
+   git clone https://github.com/Vanzaaa04/arkadia-library.git
+   cd arkadia-library
    ```
 2. Jalankan server pengembangan PHP:
    ```bash
@@ -103,6 +127,6 @@ Sistem membedakan **3 jenis keanggotaan OOP** (`RegularMember`, `PremiumMember`,
 
 ### Opsi 2 — Laragon / XAMPP
 
-1. Salin atau letakkan folder proyek ke `C:\laragon\www\arkadia` *(Laragon)* atau `C:\xampp\htdocs\arkadia` *(XAMPP)*.
+1. Clone atau letakkan folder proyek ke `C:\laragon\www\arkadia-library` *(Laragon)* atau `C:\xampp\htdocs\arkadia-library` *(XAMPP)*.
 2. Pastikan modul **Apache** sudah aktif.
-3. Buka **`http://localhost/arkadia`** di browser.
+3. Buka **`http://localhost/arkadia-library`** di browser.
