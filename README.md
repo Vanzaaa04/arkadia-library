@@ -34,37 +34,43 @@ Sistem membedakan **3 jenis keanggotaan OOP** (`RegularMember`, `PremiumMember`,
 
 > **Cara Masuk / Pindah Akun:** Klik **Masuk** di kanan atas header lalu pilih salah satu dari **3 tombol akun demo 1-klik** (Reguler / Premium / Dosen) atau masukkan email terdaftar di atas; bisa juga buka menu **Anggota** dan klik **Masuk akun ini** pada salah satu dari keempat kartu anggota, atau buat akun baru lewat tombol **Daftar**.
 
-## Alur Penggunaan Web (Dari Awal Sampai Akhir)
+## Alur Akses Menu Utama
 
-Untuk mencoba keseluruhan fitur aplikasi dari awal sampai selesai, ikuti urutan skenario berikut:
+- **Navigasi Atas:** **Beranda** (hero 3D & kategori), **Katalog** (cari, sortir, Grid/Daftar, detail, sewa), **Peminjaman** (*Pinjaman saya / Semua anggota*, baca penuh, perpanjang, struk PDF, kembalikan), **Anggota** (kartu semua member & ganti akun instan), **Tambah Buku** (input katalog baru + pratinjau sampul), dan **Info Sistem** (rubrik 100 poin & inspeksi OOP *Reflection API*).
+- **Kontrol Pojok Kanan Header:** tombol **Masuk** / **Daftar** (atau kapsul akun aktif + **Keluar**), sakelar tema **Terang / Gelap**, dan tombol **Reset** *(panah melingkar)* untuk mengembalikan data demo ke kondisi awal.
+
+## Alur Penggunaan Web (Berkesinambungan Antar Akun)
+
+Skenario berikut dirancang menyambung dari satu akun ke akun berikutnya sehingga terlihat bagaimana perubahan stok buku, kuota pinjam, status sewa, dan katalog saling terhubung:
 
 1. **Tahap 1 — Mode Pengunjung / Tamu *(Sebelum Masuk)***
-   - Buka **Beranda** untuk melihat *Hero Book Deck 3D* interaktif *(klik buku kiri/kanan untuk memutar sorotan, klik buku tengah untuk melihat detail)* dan strip kategori.
-   - Buka **Katalog** &rarr; uji pencarian, filter kategori/jenis, sortir **Harga Termurah**, dan alih tampilan **Grid &harr; Daftar**.
-   - Klik salah satu sampul buku &rarr; klik **Baca cuplikan** untuk mencoba **Mini E-Reader** (*Terang / Sepia / Gelap*, ukuran font `A−`/`A+`). Jika langsung klik **Sewa**, sistem otomatis mengarahkan ke jendela **Masuk / Daftar**.
+   - Jelajahi **Beranda** (*3D Hero Book Deck* & strip kategori) lalu buka **Katalog** (uji sortir *Harga Termurah* dan tampilan *Grid &harr; Daftar*).
+   - Perhatikan *Full-Stack Web Security* (`EBK-106`) hanya tersisa **`Sisa 1`** stok. Buka detailnya lalu klik **Baca cuplikan** untuk mencoba **Mini E-Reader** (*Terang / Sepia / Gelap*, ukuran huruf `A−`/`A+`).
+   - Saat klik **Sewa**, sistem otomatis membuka jendela **Masuk / Daftar**.
 
-2. **Tahap 2 — Uji Akun Reguler *(`Nadine Kusuma Wardhani` / `MBR-03`)***
-   - Klik **Masuk** &rarr; pilih tombol 1-klik **Anggota Reguler**.
-   - Klik **Sewa** pada salah satu buku di Katalog untuk melihat tarif standar (**diskon 0%**, biaya layanan berlaku, pilihan durasi maksimal **7 hari**).
-   - Buka menu **Peminjaman**, lalu klik **+3 hari** pada pinjaman aktif 5 hari milik Nadine &rarr; sistem memunculkan notifikasi validasi OOP bahwa total 8 hari melebihi batas maksimal **7 hari** Anggota Reguler.
+2. **Tahap 2 — Akun Reguler *(`Nadine Kusuma Wardhani` / `MBR-03`)* &rarr; Uji Batas Kuota & Durasi**
+   - Klik **Masuk** &rarr; pilih tombol 1-klik **Anggota Reguler** (`0%` diskon, maks. `7` hari, kuota awal **`1/2`**).
+   - Di **Peminjaman**, klik **+3 hari** pada pinjaman aktifnya (*Full-Stack Web Security*, 5 hari) &rarr; sistem memunculkan pesan validasi OOP bahwa total `8` hari melebihi batas **7 hari** Anggota Reguler.
+   - Kembali ke **Katalog**, sewa *The Pragmatic PHP 8.3* selama `3` hari. Kini kuota Nadine menjadi penuh **`2/2`** *(percobaan menyewa buku lain akan ditahan oleh batas kuota Reguler)*.
 
-3. **Tahap 3 — Pindah ke Akun Premium *(`Raka Aditya Mahendra` / `MBR-02`)***
-   - Buka menu **Anggota** &rarr; klik **Masuk akun ini** pada kartu **Raka Aditya Mahendra** *(atau melalui kapsul profil di kanan atas)*.
-   - Coba klik **Sewa** di Katalog untuk melihat kalkulasi otomatis **diskon 20% + biaya layanan Rp 0 (Gratis)** hingga durasi **14 hari**.
-   - Buka menu **Peminjaman** (tab **Pinjaman saya**) pada buku *Refactoring UI*:
-     - Klik **Baca** (*Lisensi aktif*) untuk membuka naskah tanpa batas pratinjau.
-     - Klik **+3 hari** untuk memperpanjang masa sewa (`7 hari` &rarr; `10 hari`) dan melihat total biaya terhitung ulang secara polimorfik.
-     - Klik **Struk** untuk melihat invoice resmi & token DRM lalu tekan **Cetak / Simpan PDF**.
-     - Klik **Kembalikan** saat selesai untuk memindahkan transaksi ke **Riwayat selesai** sekaligus memulihkan stok buku dan kuota anggota.
+3. **Tahap 3 — Pindah ke Akun Premium *(`Raka Aditya Mahendra` / `MBR-02`)* &rarr; Habiskan Stok, Perpanjang, Struk, & Kembalikan**
+   - Pindah akun lewat menu **Anggota** &rarr; **Masuk akun ini** pada **Raka Aditya Mahendra** (`20%` diskon + **gratis biaya layanan `Rp 0`**, maks. `14` hari).
+   - Sewa salinan terakhir *Full-Stack Web Security* (`EBK-106`) &rarr; di Katalog buku ini langsung berubah menjadi **`Habis`** *(tidak bisa disewa akun lain selama masih dipinjam Raka)*.
+   - Di **Peminjaman** *(pantau tab **Semua anggota** untuk melihat pinjaman Nadine & Raka sekaligus, lalu pindah ke **Pinjaman saya**)*:
+     - Klik **Baca** (*Lisensi aktif*) untuk membaca tanpa batas pratinjau.
+     - Klik **+3 hari** pada *Refactoring UI* (`7` &rarr; `10` hari, total biaya dihitung ulang polimorfik).
+     - Klik **Struk** lalu uji **Cetak / Simpan PDF**.
+     - Klik **Kembalikan** pada *Full-Stack Web Security* &rarr; transaksi masuk ke **Riwayat selesai**, dan stok `EBK-106` **pulih kembali (`Sisa 1`)** untuk akun berikutnya.
 
-4. **Tahap 4 — Uji Akun Dosen & Peneliti *(`Aurelia Prameswari, M.Kom.` / `MBR-01`)***
-   - Pindah akun ke **Aurelia Prameswari, M.Kom.** lewat menu **Anggota** / **Masuk**.
-   - Buka modal **Sewa** dan pilih durasi panjang **21 hari** untuk memverifikasi **diskon subsidi riset 30%** dan kuota maksimal **8 buku**.
+4. **Tahap 4 — Pindah ke Akun Dosen & Peneliti *(`Aurelia Prameswari, M.Kom.` / `MBR-01`)* &rarr; Sewa 21 Hari & Tambah Buku**
+   - Pindah ke akun **Dosen & Peneliti** (`30%` subsidi riset, maks. `21` hari, kuota `8` buku).
+   - Langsung sewa *Full-Stack Web Security* yang baru saja dikembalikan Raka menggunakan durasi maksimal **`21 hari`** dengan **potongan 30%**.
+   - Buka menu **Tambah Buku** untuk menambahkan 1 e-book baru ke katalog *(tersimpan otomatis ke `data/ebooks.json` & `data/ebooks.xml`)*.
 
-5. **Tahap 5 — Tambah Data, Daftar Baru, Info Sistem, & Reset**
-   - Uji **Daftar Anggota Baru** lewat tombol **Daftar** *(atau formulir di menu **Anggota**)* dan **Tambah Buku** dengan pratinjau sampul langsung.
-   - Buka **Info Sistem** untuk mengecek pemenuhan rubrik 100 poin serta daftar **16 class & interface OOP** yang dibaca langsung oleh **PHP Reflection API**.
-   - Terakhir, klik ikon **Reset** di kanan atas header untuk mengembalikan data demo awal (`6` buku, `4` anggota, `4` transaksi).
+5. **Tahap 5 — Akun Baru *(`Daftar`)* / `Dimas Setiawan Prakoso` *(`MBR-04`)*, Info Sistem, & Reset**
+   - Klik **Daftar** untuk membuat anggota baru *(atau masuk sebagai **Dimas** `MBR-04` yang kuotanya masih kosong **`0/5`**)* &rarr; e-book baru yang ditambahkan Aurelia di Tahap 4 langsung tersedia di **Katalog** dan siap disewa.
+   - Buka menu **Info Sistem** untuk mengecek ringkasan rubrik 100 poin serta struktur **16 class & interface OOP** via **Reflection API**.
+   - Klik ikon **Reset** *(kanan atas header)* setelah selesai demo untuk mengembalikan seluruh data ke kondisi awal (`6` buku, `4` anggota, `4` transaksi).
 
 ## Fitur Utama Aplikasi
 
