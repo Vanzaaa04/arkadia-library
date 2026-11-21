@@ -11,17 +11,6 @@ use App\Support\ViewHelper;
             <h1 id="catalogTitle">Katalog E-Book</h1>
             <p>Menampilkan <strong id="catalogCount"><?= count($ebooks) ?></strong> dari <?= count($ebooks) ?> judul tersedia.</p>
         </div>
-        <?php if ($currentUser !== null): ?>
-            <div class="account-chip-inline">
-                <span class="avatar avatar--xs avatar--<?= ViewHelper::e($currentUser->getTierCode()) ?>"><?= ViewHelper::e(ViewHelper::memberInitials($currentUser->getName())) ?></span>
-                <span>Menyewa sebagai <strong><?= ViewHelper::e($currentUser->getName()) ?></strong> &middot; <?= ViewHelper::e($currentUser->getTierLabel()) ?></span>
-                <button type="button" class="link-btn" data-open-auth="login">Ganti</button>
-            </div>
-        <?php else: ?>
-            <button type="button" class="btn btn--soft btn--sm" data-open-auth="login">
-                Masuk / Daftar untuk menyewa
-            </button>
-        <?php endif; ?>
     </div>
 
     <div class="toolbar" role="search">

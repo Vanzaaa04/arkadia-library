@@ -737,27 +737,46 @@ html[data-theme="dark"] .icon-moon { display: none; }
 .avatar--faculty { background: #1C3D6E; color: #fff; }
 .avatar--xs { width: 26px; height: 26px; font-size: .64rem; }
 
-.member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 20px; margin-bottom: 36px; }
 .member-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow-sm);
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 22px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow-sm);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
-.member-card.is-current { border-color: var(--success); box-shadow: 0 0 0 2px var(--success-soft); }
-.member-card__top { display: flex; align-items: center; gap: 12px; }
-.member-card__id { min-width: 0; }
-.member-card__id h3 { font-size: .98rem; font-weight: 700; line-height: 1.3; }
-.member-card__id p { font-size: .8rem; color: var(--muted); }
-.tier-pill { align-self: flex-start; font-size: .74rem; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: var(--surface-2); color: var(--text-2); }
+.member-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow); transform: translateY(-2px); }
+.member-card.is-current { border-color: var(--success); box-shadow: 0 0 0 2px var(--success-soft), var(--shadow-sm); }
+.member-card__top { display: flex; align-items: center; gap: 13px; }
+.member-card__id { min-width: 0; flex: 1; }
+.member-card__id h3 {
+    font-size: 1rem; font-weight: 700; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.member-card__id p {
+    font-size: .8rem; color: var(--muted); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.member-card__badges { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.member-card__code { font-size: .72rem; color: var(--muted); }
+.tier-pill { align-self: flex-start; font-size: .74rem; font-weight: 700; padding: 4px 11px; border-radius: 99px; background: var(--surface-2); color: var(--text-2); }
 .tier-pill--premium { background: var(--primary-soft); color: var(--primary-text); }
 .tier-pill--faculty { background: var(--success-soft); color: var(--success); }
-.member-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.member-card__stats div { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
-.member-card__stats dt { font-size: .69rem; color: var(--muted); font-weight: 600; }
-.member-card__stats dd { font-size: .92rem; font-weight: 800; }
-.quota { height: 5px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
-.quota span { display: block; height: 100%; background: var(--primary); border-radius: 99px; }
-.member-card__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; }
-.member-card__foot .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.member-card__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.member-card__stats div {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; display: flex; flex-direction: column; gap: 3px;
+}
+.member-card__stats dt { font-size: .7rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.member-card__stats dd { font-size: .96rem; font-weight: 800; color: var(--text); white-space: nowrap; }
+.member-card__quota { display: flex; flex-direction: column; gap: 6px; }
+.member-card__quota-head { display: flex; justify-content: space-between; align-items: center; font-size: .72rem; color: var(--muted); }
+.member-card__quota-head strong { color: var(--text-2); font-weight: 700; }
+.quota { height: 6px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
+.quota span { display: block; height: 100%; background: var(--primary); border-radius: 99px; transition: width .25s ease; }
+.member-card__foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border);
+}
+.member-card__foot .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-size: .76rem; }
 
 /* ---------------- Forms ---------------- */
 .form-card {

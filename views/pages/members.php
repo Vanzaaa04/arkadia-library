@@ -20,37 +20,50 @@ use App\Support\ViewHelper;
             $ratio = min(100, (int) round($member->getActiveLoans() / max(1, $member->getMaxConcurrentLoans()) * 100));
             $isCurrent = $currentUser !== null && $currentUser->getId() === $member->getId();
             ?>
-            <article class="member-card <?= $isCurrent ? 'is-current' : '' ?>">
-                <div class="member-card__top">
-                    <span class="avatar avatar--<?= ViewHelper::e($member->getTierCode()) ?>"><?= ViewHelper::e(ViewHelper::memberInitials($member->getName())) ?></span>
-                    <div class="member-card__id">
-                        <h3><?= ViewHelper::e($member->getName()) ?></h3>
-                        <p><?= ViewHelper::e($member->getInstitution()) ?></p>
-                    </div>
-                </div>
-                <span class="tier-pill tier-pill--<?= ViewHelper::e($member->getTierCode()) ?>"><?= ViewHelper::e($member->getTierLabel()) ?></span>
-                <dl class="member-card__stats">
-                    <div><dt>Diskon</dt><dd><?= (int) round($member->getDiscountRate() * 100) ?>%</dd></div>
-                    <div><dt>Maks. sewa</dt><dd><?= $member->getMaxBorrowDays() ?> hari</dd></div>
-                    <div><dt>Dipinjam</dt><dd><?= $member->getActiveLoans() ?>/<?= $member->getMaxConcurrentLoans() ?></dd></div>
-                </dl>
-                <div class="quota" title="Kuota pinjaman terpakai">
-                    <span style="width: <?= $ratio ?>%"></span>
-                </div>
-                <div class="member-card__foot">
-                    <span class="muted mono"><?= ViewHelper::e($member->getEmail()) ?></span>
-                    <?php if ($isCurrent): ?>
-                        <span class="pill pill--success">Akun aktif</span>
-                    <?php else: ?>
-                        <form method="POST" action="index.php" class="inline-form">
-                            <input type="hidden" name="action" value="login_demo">
-                            <input type="hidden" name="member_id" value="<?= ViewHelper::e($member->getId()) ?>">
-                            <input type="hidden" name="return_tab" value="members">
-                            <button type="submit" class="btn btn--soft btn--sm">Masuk akun ini</button>
-                        </form>
-                    <?php endif; ?>
-                </div>
-            </article>
+                    <article class="member-card <?= $isCurrent ? 'is-current' : '' ?>">
+                        <div class="member-card__top">
+                            <span class="avatar avatar--<?= ViewHelper::e($member->getTierCode()) ?>"><?= ViewHelper::e(ViewHelper::memberInitials($member->getName())) ?></span>
+                            <div class="member-card__id">
+                                <h3 title="<?= ViewHelper::e($member->getName()) ?>"><?= ViewHelper::e($member->getName()) ?></h3>
+                                <p title="<?= ViewHelper::e($member->getInstitution()) ?>"><?= ViewHelper::e($member->getInstitution()) ?></p>
+                            </div>
+                        </div>
+
+                        <div class="member-card__badges">
+                            <span class="tier-pill tier-pill--<?= ViewHelper::e($member->getTierCode()) ?>"><?= ViewHelper::e($member->getTierLabel()) ?></span>
+                            <span class="member-card__code mono"><?= ViewHelper::e($member->getMemberCode()) ?></span>
+                        </div>
+
+                        <dl class="member-card__stats">
+                            <div><dt>Diskon</dt><dd><?= (int) round($member->getDiscountRate() * 100) ?>%</dd></div>
+                            <div><dt>Maks. sewa</dt><dd><?= $member->getMaxBorrowDays() ?> hari</dd></div>
+                            <div><dt>Dipinjam</dt><dd><?= $member->getActiveLoans() ?>/<?= $member->getMaxConcurrentLoans() ?></dd></div>
+                        </dl>
+
+                        <div class="member-card__quota">
+                            <div class="member-card__quota-head">
+                                <span>Kuota terpakai</span>
+                                <strong><?= $ratio ?>%</strong>
+                            </div>
+                            <div class="quota" title="Kuota pinjaman terpakai">
+                                <span style="width: <?= $ratio ?>%"></span>
+                            </div>
+                        </div>
+
+                        <div class="member-card__foot">
+                            <span class="muted mono" title="<?= ViewHelper::e($member->getEmail()) ?>"><?= ViewHelper::e($member->getEmail()) ?></span>
+                            <?php if ($isCurrent): ?>
+                                <span class="pill pill--success">Akun aktif</span>
+                            <?php else: ?>
+                                <form method="POST" action="index.php" class="inline-form">
+                                    <input type="hidden" name="action" value="login_demo">
+                                    <input type="hidden" name="member_id" value="<?= ViewHelper::e($member->getId()) ?>">
+                                    <input type="hidden" name="return_tab" value="members">
+                                    <button type="submit" class="btn btn--soft btn--sm">Masuk akun ini</button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    </article>
         <?php endforeach; ?>
     </div>
 
