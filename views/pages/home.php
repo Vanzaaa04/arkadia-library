@@ -11,24 +11,24 @@ use App\Support\ViewHelper;
         <div class="container hero-banner__inner">
             <div class="hero-banner__copy">
                 <?php if ($currentUser !== null): ?>
-                    <span class="hero-eyebrow">Halo, <?= ViewHelper::e(ViewHelper::firstName($currentUser->getName())) ?> &middot; <?= ViewHelper::e($currentUser->getTierLabel()) ?></span>
+                    <span class="hero-eyebrow"><span class="live-dot" aria-hidden="true"></span>Halo, <?= ViewHelper::e(ViewHelper::firstName($currentUser->getName())) ?> &middot; <?= ViewHelper::e($currentUser->getTierLabel()) ?></span>
                 <?php else: ?>
-                    <span class="hero-eyebrow">Pilihan Editor &middot; Perpustakaan Digital Kampus</span>
+                    <span class="hero-eyebrow"><span class="live-dot" aria-hidden="true"></span>Pilihan Editor &middot; Perpustakaan Digital Kampus</span>
                 <?php endif; ?>
-                <h1 id="homeTitle">Baca lebih banyak, <span class="hero-accent">bayar sesuai hari.</span></h1>
+                <h1 id="homeTitle">Baca lebih banyak, <span class="hero-accent hero-rotator" id="heroRotator" data-phrases="bayar sesuai hari.|akses instan 24/7.|hemat hingga 30%."><span class="hero-rotator__text">bayar sesuai hari.</span></span></h1>
                 <p class="hero-lead">
                     Sewa buku teknologi, desain, dan riset akademik per hari tanpa harus membeli penuh.
                     Diskon hingga 30% aktif otomatis untuk Anggota Premium dan Dosen.
                 </p>
                 <div class="hero-cta">
-                    <button type="button" class="btn btn--primary btn--lg hero-cta__primary" data-goto="catalog">
+                    <button type="button" class="btn btn--primary btn--lg hero-cta__primary btn--magnetic" data-goto="catalog">
                         Jelajahi Katalog
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
                     </button>
                     <?php if ($currentUser === null): ?>
-                        <button type="button" class="btn btn--outline-light btn--lg" data-open-auth="register">Daftar Anggota</button>
+                        <button type="button" class="btn btn--outline-light btn--lg btn--magnetic" data-open-auth="register">Daftar Anggota</button>
                     <?php else: ?>
-                        <button type="button" class="btn btn--outline-light btn--lg" data-goto="loans">Pinjaman Saya (<?= count($myActiveLoans) ?>)</button>
+                        <button type="button" class="btn btn--outline-light btn--lg btn--magnetic" data-goto="loans">Pinjaman Saya (<?= count($myActiveLoans) ?>)</button>
                     <?php endif; ?>
                 </div>
                 <dl class="hero-metrics">
@@ -80,6 +80,24 @@ use App\Support\ViewHelper;
                     </div>
                 <?php endif; ?>
             </div>
+        </div>
+    </div>
+
+    <!-- Editorial Infinite Marquee Strip -->
+    <div class="editorial-marquee" aria-hidden="true">
+        <div class="editorial-marquee__track">
+            <?php for ($mLoop = 0; $mLoop < 2; $mLoop++): ?>
+                <div class="editorial-marquee__group">
+                    <span>PHP 8 OOP POLIMORFISME</span><i class="marquee-sep"></i>
+                    <span>DISKON ANGGOTA PREMIUM 20%</span><i class="marquee-sep"></i>
+                    <span>DISKON DOSEN &amp; PENELITI 30%</span><i class="marquee-sep"></i>
+                    <span>MINI WEB E-READER 3 MODE KERTAS</span><i class="marquee-sep"></i>
+                    <span>LISENSI READIUM LCP DRM</span><i class="marquee-sep"></i>
+                    <span>STRUK DIGITAL &amp; CETAK PDF</span><i class="marquee-sep"></i>
+                    <span>PERPANJANG SEWA +3 HARI</span><i class="marquee-sep"></i>
+                    <span>SEWA FLEKSIBEL PER HARI</span><i class="marquee-sep"></i>
+                </div>
+            <?php endfor; ?>
         </div>
     </div>
 

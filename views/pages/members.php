@@ -46,7 +46,7 @@ use App\Support\ViewHelper;
                                 <strong><?= $ratio ?>%</strong>
                             </div>
                             <div class="quota" title="Kuota pinjaman terpakai">
-                                <span style="width: <?= $ratio ?>%"></span>
+                                <span data-quota-pct="<?= $ratio ?>" style="width: <?= $ratio ?>%"></span>
                             </div>
                         </div>
 

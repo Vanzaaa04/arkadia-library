@@ -53,7 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = $$('.nav-link[data-page]');
     let currentTab = (new URLSearchParams(window.location.search)).get('tab') || 'home';
 
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let revealActivePage = () => {};
+    let syncNavIndicator = () => {};
+    let animateQuotaBars = () => {};
+
     function showPage(name) {
         const target = $(`#page-${name}`);
         if (!target) return;
@@ -67,7 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = new URL(window.location.href);
         url.searchParams.set('tab', name);
         history.replaceState(null, '', url);
+        syncNavIndicator();
         revealActivePage(target);
+        if (name === 'members') animateQuotaBars();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     $$('[data-page], [data-goto]').forEach((el) => {
@@ -181,16 +187,30 @@ document.addEventListener('DOMContentLoaded', () => {
         revealActivePage(catalogGrid);
     }
 
+    function triggerCatalogWave() {
+        if (reduceMotion) return;
+        let idx = 0;
+        $$('#catalogGrid .book-card').forEach((card) => {
+            if (card.hidden) return;
+            card.classList.remove('is-wave');
+            card.style.setProperty('--wave-delay', `${(idx % 8) * 28}ms`);
+            void card.offsetWidth;
+            card.classList.add('is-wave');
+            idx++;
+        });
+    }
+
     function setActiveCategoryChip(cat) {
         activeCategory = cat;
         $$('.chip[data-cat]').forEach((c) => c.classList.toggle('is-active', c.dataset.cat === cat));
         applyFilters();
+        triggerCatalogWave();
     }
 
     searchInput?.addEventListener('input', applyFilters);
-    typeFilter?.addEventListener('change', applyFilters);
-    sortFilter?.addEventListener('change', () => { sortCatalog(); applyFilters(); });
-    availableOnly?.addEventListener('change', applyFilters);
+    typeFilter?.addEventListener('change', () => { applyFilters(); triggerCatalogWave(); });
+    sortFilter?.addEventListener('change', () => { sortCatalog(); applyFilters(); triggerCatalogWave(); });
+    availableOnly?.addEventListener('change', () => { applyFilters(); triggerCatalogWave(); });
     $$('.chip[data-cat]').forEach((chip) => {
         chip.addEventListener('click', () => setActiveCategoryChip(chip.dataset.cat));
     });
@@ -218,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnViewList?.classList.toggle('is-active', isList);
         btnViewGrid?.setAttribute('aria-pressed', isList ? 'false' : 'true');
         btnViewList?.setAttribute('aria-pressed', isList ? 'true' : 'false');
+        triggerCatalogWave();
     }
     btnViewGrid?.addEventListener('click', () => setCatalogView('grid'));
     btnViewList?.addEventListener('click', () => setCatalogView('list'));
@@ -489,6 +510,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    let lastBillTotal = 0;
+    let billRollRaf = 0;
+    function animateBillTotal(targetVal) {
+        const el = $('#billTotal');
+        if (!el) return;
+        const target = Number(targetVal) || 0;
+        cancelAnimationFrame(billRollRaf);
+        if (reduceMotion || lastBillTotal <= 0 || lastBillTotal === target) {
+            lastBillTotal = target;
+            el.textContent = rupiah(target);
+            return;
+        }
+        const from = lastBillTotal;
+        const duration = 340;
+        const start = performance.now();
+        function frame(now) {
+            const p = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - p, 3);
+            el.textContent = rupiah(from + (target - from) * eased);
+            if (p < 1) {
+                billRollRaf = requestAnimationFrame(frame);
+            } else {
+                lastBillTotal = target;
+                el.textContent = rupiah(target);
+            }
+        }
+        billRollRaf = requestAnimationFrame(frame);
+    }
+
     function renderQuote(q) {
         $('#billBaseLabel').textContent = `Biaya sewa (${q.duration_days} hari × ${rupiah(q.daily_rate)})`;
         $('#billBase').textContent = rupiah(q.base_cost);
@@ -506,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'Diskon anggota';
         $('#billDiscount').textContent = q.discount_amount > 0 ? '−' + rupiah(q.discount_amount) : 'Rp 0';
         $('#billDue').textContent = formatTanggal(q.due_date);
-        $('#billTotal').textContent = rupiah(q.total_cost);
+        animateBillTotal(q.total_cost);
         $('#billTrace').textContent = `${shortClass(q.member_class)} × ${shortClass(q.ebook_class)}`;
 
         const errors = [];
@@ -563,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         currentBook = b;
+        lastBillTotal = 0;
         $('#rentEbookId').value = b.id;
         paintCover($('#rmCover'), b, 'cover--sm');
         $('#rmTitle').textContent = b.title;
@@ -710,7 +761,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* ---------- 9. Animasi Hero Book Deck, Parallax, Count-Up, Topbar, & Scroll Reveal ---------- */
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const topbar = $('.topbar');
     const syncTopbarShadow = () => topbar?.classList.toggle('is-scrolled', window.scrollY > 12);
     window.addEventListener('scroll', syncTopbarShadow, { passive: true });
@@ -864,5 +914,129 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.documentElement.classList.add('js-motion');
         revealActivePage($('.page.is-active') || document);
+    }
+
+    /* ---------- 10. Full-Site Motion Suite (Nav Indicator, Scroll Bar, Kinetic Hero, 3D Tilt Cards, Quota, Ripple) ---------- */
+    const scrollBar = $('#scrollProgressBar');
+    const syncScrollProgress = () => {
+        if (!scrollBar) return;
+        const doc = document.documentElement;
+        const max = Math.max(1, doc.scrollHeight - window.innerHeight);
+        const ratio = Math.min(1, Math.max(0, window.scrollY / max));
+        scrollBar.style.transform = `scaleX(${ratio.toFixed(4)})`;
+    };
+    window.addEventListener('scroll', syncScrollProgress, { passive: true });
+    window.addEventListener('resize', syncScrollProgress, { passive: true });
+    syncScrollProgress();
+
+    const mainNav = $('#mainNav');
+    const navIndicator = $('#navIndicator');
+    syncNavIndicator = () => {
+        if (!mainNav || !navIndicator) return;
+        const active = $('.nav-link.is-active', mainNav);
+        if (!active || active.offsetWidth === 0) return;
+        navIndicator.style.width = `${Math.max(12, active.offsetWidth - 20)}px`;
+        navIndicator.style.transform = `translateX(${active.offsetLeft + 10}px)`;
+        mainNav.classList.add('has-indicator');
+    };
+    syncNavIndicator();
+    window.addEventListener('resize', syncNavIndicator, { passive: true });
+    document.fonts?.ready?.then(syncNavIndicator);
+
+    animateQuotaBars = () => {
+        if (reduceMotion) return;
+        $$('.quota span[data-quota-pct]').forEach((bar) => {
+            const pct = bar.dataset.quotaPct || '0';
+            bar.style.width = '0%';
+            void bar.offsetWidth;
+            requestAnimationFrame(() => {
+                bar.style.width = `${pct}%`;
+            });
+        });
+    };
+    if (currentTab === 'members') animateQuotaBars();
+
+    /* Kinetic Headline Rotator */
+    const rotator = $('#heroRotator');
+    const rotatorText = rotator?.querySelector('.hero-rotator__text');
+    if (rotator && rotatorText && !reduceMotion) {
+        const phrases = (rotator.dataset.phrases || '').split('|').map((s) => s.trim()).filter(Boolean);
+        let phraseIdx = 0;
+        if (phrases.length > 1) {
+            setInterval(() => {
+                if (currentTab !== 'home' || $('dialog.modal[open]')) return;
+                phraseIdx = (phraseIdx + 1) % phrases.length;
+                rotatorText.classList.add('is-exit');
+                setTimeout(() => {
+                    rotatorText.textContent = phrases[phraseIdx];
+                    rotatorText.classList.remove('is-exit');
+                    rotatorText.classList.add('is-enter');
+                    void rotatorText.offsetWidth;
+                    rotatorText.classList.remove('is-enter');
+                }, 340);
+            }, 3400);
+        }
+    }
+
+    if (!reduceMotion) {
+        /* Cursor-tracked ambient spotlight on Hero background */
+        const heroBanner = $('.hero-banner');
+        heroBanner?.addEventListener('pointermove', (ev) => {
+            if (ev.pointerType !== 'mouse') return;
+            const rect = heroBanner.getBoundingClientRect();
+            const x = ((ev.clientX - rect.left) / rect.width) * 100;
+            const y = ((ev.clientY - rect.top) / rect.height) * 100;
+            heroBanner.style.setProperty('--hx', `${x.toFixed(1)}%`);
+            heroBanner.style.setProperty('--hy', `${y.toFixed(1)}%`);
+        });
+
+        /* Subtle magnetic follow on Hero CTA buttons */
+        $$('.btn--magnetic').forEach((btn) => {
+            btn.addEventListener('pointermove', (ev) => {
+                if (ev.pointerType !== 'mouse') return;
+                const rect = btn.getBoundingClientRect();
+                const dx = ((ev.clientX - rect.left) / rect.width - 0.5) * 10;
+                const dy = ((ev.clientY - rect.top) / rect.height - 0.5) * 6;
+                btn.style.transform = `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0)`;
+            });
+            btn.addEventListener('pointerleave', () => {
+                btn.style.transform = '';
+            });
+        });
+
+        /* 3D Tilt & Studio Glare on Tier & Member Cards */
+        $$('.tier-card, .member-card').forEach((card) => {
+            card.addEventListener('pointermove', (ev) => {
+                if (ev.pointerType !== 'mouse') return;
+                const rect = card.getBoundingClientRect();
+                const px = (ev.clientX - rect.left) / rect.width;
+                const py = (ev.clientY - rect.top) / rect.height;
+                const rx = (0.5 - py) * 6;
+                const ry = (px - 0.5) * 7;
+                card.style.setProperty('--gx', `${(px * 100).toFixed(1)}%`);
+                card.style.setProperty('--gy', `${(py * 100).toFixed(1)}%`);
+                card.style.transform = `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateY(-3px)`;
+            });
+            card.addEventListener('pointerleave', () => {
+                card.style.transform = '';
+            });
+        });
+
+        /* Tactile Click Ripple on Interactive Controls */
+        document.addEventListener('pointerdown', (ev) => {
+            const target = ev.target.closest('.btn, .chip, .cat-pill, .day-chip');
+            if (!target || target.disabled) return;
+            const rect = target.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple-fx';
+            ripple.style.width = `${size}px`;
+            ripple.style.height = `${size}px`;
+            ripple.style.left = `${ev.clientX - rect.left - size / 2}px`;
+            ripple.style.top = `${ev.clientY - rect.top - size / 2}px`;
+            target.appendChild(ripple);
+            ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+            setTimeout(() => ripple.remove(), 580);
+        });
     }
 });

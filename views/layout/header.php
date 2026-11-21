@@ -27,6 +27,8 @@ use App\Support\ViewHelper;
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+    <div class="scroll-progress" aria-hidden="true"><span id="scrollProgressBar"></span></div>
+
     <!-- ===================== HEADER & NAVIGASI ===================== -->
     <header class="topbar">
         <div class="container topbar__inner">
@@ -40,7 +42,7 @@ use App\Support\ViewHelper;
                 </span>
             </a>
 
-            <nav class="nav" aria-label="Menu utama">
+            <nav class="nav" id="mainNav" aria-label="Menu utama">
                 <button type="button" class="<?= ViewHelper::navClass($tab, 'home') ?>" data-page="home">
                     <span>Beranda</span>
                 </button>
@@ -60,6 +62,7 @@ use App\Support\ViewHelper;
                 <button type="button" class="<?= ViewHelper::navClass($tab, 'system') ?>" data-page="system">
                     <span>Info Sistem</span>
                 </button>
+                <span class="nav-indicator" id="navIndicator" aria-hidden="true"></span>
             </nav>
 
             <div class="topbar__actions">
