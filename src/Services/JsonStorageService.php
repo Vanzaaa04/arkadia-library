@@ -17,10 +17,38 @@ class JsonStorageService
 
     public function __construct(?string $dataDir = null)
     {
-        $this->dataDir = $dataDir ?? dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data';
-        if (!is_dir($this->dataDir)) {
-            mkdir($this->dataDir, 0775, true);
+        $preferredDir = $dataDir ?? dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data';
+        $this->dataDir = $this->resolveWritableDir($preferredDir);
+    }
+
+    /**
+     * Memastikan direktori penyimpanan dapat ditulis; jatuh ke sys_get_temp_dir()
+     * apabila filesystem proyek bersifat read-only (mis. lingkungan serverless).
+     */
+    private function resolveWritableDir(string $preferredDir): string
+    {
+        if (!is_dir($preferredDir)) {
+            @mkdir($preferredDir, 0775, true);
         }
+
+        if (is_dir($preferredDir) && is_writable($preferredDir)) {
+            return $preferredDir;
+        }
+
+        $fallbackDir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'arkadia-data';
+        if (!is_dir($fallbackDir)) {
+            @mkdir($fallbackDir, 0775, true);
+        }
+
+        foreach (['ebooks.json', 'members.json', 'transactions.json', 'ebooks.xml'] as $seedFile) {
+            $source = $preferredDir . DIRECTORY_SEPARATOR . $seedFile;
+            $target = $fallbackDir . DIRECTORY_SEPARATOR . $seedFile;
+            if (is_file($source) && !is_file($target)) {
+                @copy($source, $target);
+            }
+        }
+
+        return $fallbackDir;
     }
 
     public function getFilePath(string $filename): string

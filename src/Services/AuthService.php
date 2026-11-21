@@ -15,6 +15,7 @@ use InvalidArgumentException;
 class AuthService
 {
     private const SESSION_KEY = 'arkadia_member_id';
+    private const COOKIE_KEY = 'arkadia_uid';
 
     private LibraryManager $manager;
 
@@ -25,17 +26,18 @@ class AuthService
 
     public function getCurrentUser(): ?User
     {
-        $memberId = $_SESSION[self::SESSION_KEY] ?? null;
+        $memberId = $_SESSION[self::SESSION_KEY] ?? ($_COOKIE[self::COOKIE_KEY] ?? null);
         if (!is_string($memberId) || $memberId === '') {
             return null;
         }
 
         $member = $this->manager->getMemberById($memberId);
         if ($member === null) {
-            unset($_SESSION[self::SESSION_KEY]);
+            $this->clearSession();
             return null;
         }
 
+        $_SESSION[self::SESSION_KEY] = $member->getId();
         return $member;
     }
 
@@ -56,7 +58,7 @@ class AuthService
             throw new DomainException('Email belum terdaftar. Silakan buat akun di tab Daftar Baru.');
         }
 
-        $_SESSION[self::SESSION_KEY] = $member->getId();
+        $this->persistSession($member->getId());
         return $member;
     }
 
@@ -67,7 +69,7 @@ class AuthService
             throw new DomainException('Akun anggota tidak ditemukan.');
         }
 
-        $_SESSION[self::SESSION_KEY] = $member->getId();
+        $this->persistSession($member->getId());
         return $member;
     }
 
@@ -77,12 +79,43 @@ class AuthService
     public function registerAndLogin(array $input): User
     {
         $member = $this->manager->registerMember($input);
-        $_SESSION[self::SESSION_KEY] = $member->getId();
+        $this->persistSession($member->getId());
         return $member;
     }
 
     public function logout(): void
     {
-        unset($_SESSION[self::SESSION_KEY]);
+        $this->clearSession();
+    }
+
+    private function persistSession(string $memberId): void
+    {
+        $_SESSION[self::SESSION_KEY] = $memberId;
+        $_COOKIE[self::COOKIE_KEY] = $memberId;
+        $this->setAuthCookie($memberId, time() + 86400 * 7);
+    }
+
+    private function clearSession(): void
+    {
+        unset($_SESSION[self::SESSION_KEY], $_COOKIE[self::COOKIE_KEY]);
+        $this->setAuthCookie('', time() - 3600);
+    }
+
+    private function setAuthCookie(string $value, int $expires): void
+    {
+        if (headers_sent()) {
+            return;
+        }
+
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
+        setcookie(self::COOKIE_KEY, $value, [
+            'expires' => $expires,
+            'path' => '/',
+            'secure' => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
     }
 }

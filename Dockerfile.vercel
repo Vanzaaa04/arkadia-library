@@ -1,0 +1,18 @@
+FROM php:8.3-apache
+
+WORKDIR /var/www/html
+
+RUN a2enmod headers \
+    && printf "<Directory /var/www/html>\n\tOptions -Indexes +FollowSymLinks\n\tAllowOverride All\n\tRequire all granted\n</Directory>\n<DirectoryMatch \"^/var/www/html/(src|views)\">\n\tRequire all denied\n</DirectoryMatch>\n" > /etc/apache2/conf-available/arkadia.conf \
+    && a2enconf arkadia \
+    && echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+COPY . /var/www/html/
+
+RUN mkdir -p /var/www/html/data \
+    && chown -R www-data:www-data /var/www/html/data \
+    && chmod -R 775 /var/www/html/data
+
+EXPOSE 80
+
+CMD ["sh", "-c", "PORT=${PORT:-80}; sed -i -E \"s/^Listen [0-9]+/Listen ${PORT}/g\" /etc/apache2/ports.conf && sed -i -E \"s/<VirtualHost \\*:[0-9]+>/<VirtualHost *:${PORT}>/g\" /etc/apache2/sites-available/000-default.conf && exec apache2-foreground"]

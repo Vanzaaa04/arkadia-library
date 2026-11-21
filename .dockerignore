@@ -1,0 +1,8 @@
+.git
+.gitignore
+*.pdf
+*.log
+.vscode
+.idea
+README.md
+Dockerfile.vercel
