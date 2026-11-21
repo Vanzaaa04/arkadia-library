@@ -10,13 +10,44 @@ Prototipe web interaktif manajemen katalog dan transaksi penyewaan e-book untuk 
 | **PHP OOP (Backend)** | **40 poin** | 16 class & interface terstruktur dalam 5 namespace dengan properti terenkapsulasi (`private`), pewarisan (`MediaItem` &rarr; 3 subclass, `User` &rarr; 3 subclass), **polimorfisme tarif & diskon**, `Transaction`, `LibraryManager`, `AuthService`, serta inspeksi live **Reflection API** di menu **Info Sistem**. |
 | **Struktur Berkas & Kualitas** | **30 poin** | Pemisahan bersih `src/` (autoload PSR-4, 1 class/interface per file), `views/` modular, `assets/` terpisah, penyimpanan persisten `data/*.json` & `data/ebooks.xml`, bebas error/warning pada PHP 8.2+. |
 
+## Jenis Akun, Hak Akses, & Akun Demo
+
+Sistem membedakan **3 jenis keanggotaan OOP** (`RegularMember`, `PremiumMember`, `FacultyMember`) ditambah **mode Pengunjung (Tamu)** sebelum masuk. Tersedia **4 akun demo bawaan** di [members.json](data/members.json).
+
+### Apa yang Bisa Dilakukan Masing-Masing Akun
+
+| Peran / Tier | Diskon Sewa | Biaya Layanan | Maks. Durasi | Kuota Aktif | Hak Akses & Aktivitas |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **Pengunjung (Tamu)** | — | — | — | — | Jelajah Beranda & Katalog, cari/filter/sortir buku, baca **cuplikan E-Reader**, lihat semua peminjaman, tambah buku/anggota, & buka **Info Sistem** *(untuk menyewa, diarahkan Masuk/Daftar)*. |
+| **Anggota Reguler** (`RegularMember`) | **0%** | Tarif standar berlaku | **7 hari** | **2 buku** | Semua akses dasar + **sewa e-book**, baca naskah penuh (**Lisensi aktif**), **+3 hari perpanjangan** *(maks. 7 hari)*, **Struk Digital PDF**, & **kembalikan buku**. |
+| **Anggota Premium** (`PremiumMember`) | **20%** | **Gratis** (`Rp 0`) | **14 hari** | **5 buku** | Semua fitur sewa dengan **potongan 20% + bebas biaya layanan**, perpanjangan hingga **14 hari**, & kelola pinjaman hingga **5 judul** bersamaan. |
+| **Dosen & Peneliti** (`FacultyMember`) | **30%** | Tarif standar berlaku | **21 hari** | **8 buku** | Semua fitur sewa dengan **subsidi riset 30%**, durasi & perpanjangan hingga **21 hari**, serta kuota terbesar (**8 judul** aktif bersamaan). |
+
+### 4 Akun Demo Siap Pakai
+
+| ID / Kode | Nama | Email Login | Jenis Akun | Pinjaman Awal |
+| :--- | :--- | :--- | :--- | :---: |
+| `MBR-01` / `ARK-2026-001` | Aurelia Prameswari, M.Kom. | `aurelia.prameswari@umm.ac.id` | **Dosen & Peneliti** | 1 / 8 buku |
+| `MBR-02` / `ARK-2026-002` | Raka Aditya Mahendra | `raka.mahendra@student.umm.ac.id` | **Anggota Premium** | 1 / 5 buku |
+| `MBR-03` / `ARK-2026-003` | Nadine Kusuma Wardhani | `nadine.wardhani@webmail.umm.ac.id` | **Anggota Reguler** | 1 / 2 buku |
+| `MBR-04` / `ARK-2026-004` | Dimas Setiawan Prakoso | `dimas.prakoso@alumni.umm.ac.id` | **Anggota Premium** | 0 / 5 buku |
+
+> **Cara Masuk / Pindah Akun:** Klik **Masuk** di kanan atas header lalu pilih salah satu dari **3 tombol akun demo 1-klik** (Reguler / Premium / Dosen) atau masukkan email terdaftar di atas; bisa juga buka menu **Anggota** dan klik **Masuk akun ini** pada salah satu dari keempat kartu anggota, atau buat akun baru lewat tombol **Daftar**.
+
+## Alur Penggunaan Web (Step-by-Step)
+
+1. **Eksplorasi Beranda & Katalog** — Pengunjung langsung melihat hero interaktif *Book Deck*, strip kategori, dan galeri **Katalog** (bisa cari judul/penulis, filter jenis media & stok, sortir harga/halaman, dan alih tampilan **Grid ↔ Daftar**).
+2. **Pratinjau Buku di Mini E-Reader** — Klik sampul buku manapun untuk melihat metadata teknis (ISBN/DOI/Audio Sandbox), lalu klik **Baca cuplikan** untuk mencoba mode baca web (*Terang / Sepia / Gelap* dan ukuran font `A−`/`A+`).
+3. **Masuk atau Daftar Anggota** — Saat klik **Sewa** (atau lewat tombol **Masuk / Daftar** di header), pilih akun demo 1-klik, login dengan email, atau daftar akun baru. Jika sebelumnya mengklik **Sewa buku**, modal sewa otomatis terbuka setelah login.
+4. **Simulasi Biaya Real-Time & Sewa** — Pilih durasi (`1`–`21` hari sesuai batas tier). Browser memanggil `fetch('index.php?api=simulate')` sehingga server PHP menghitung biaya sewa pokok, biaya layanan, diskon polimorfik, tanggal jatuh tempo, dan memvalidasi stok/kuota sebelum menyimpan transaksi ke JSON.
+5. **Kelola Peminjaman Aktif & Struk PDF** — Di menu **Peminjaman** (*Pinjaman saya* atau *Semua anggota*), pengguna dapat klik **Baca** (*Lisensi aktif*), memperpanjang durasi **+3 hari** *(divalidasi terhadap batas tier di PHP)*, membuka **Struk Digital** untuk **Cetak / Simpan PDF**, atau klik **Kembalikan** untuk memulihkan stok buku & kuota pinjam.
+6. **Manajemen Data, Info Sistem, & Reset Demo** — Tambahkan judul baru dengan pratinjau sampul langsung di **Tambah Buku**, periksa implementasi **16 class/interface OOP** via *Reflection API* di **Info Sistem**, dan gunakan tombol **Reset** di header kanan atas kapan saja untuk kembali ke data contoh awal.
+
 ## Fitur Utama Aplikasi
 
 - **Beranda Interaktif & Animasi Modern** — *Hero Book Deck* 3D interaktif yang dapat diklik/diputar, *kinetic headline rotator*, *marquee* informasi, kilau sampul saat *hover*, *morphing nav indicator*, serta dukungan `prefers-reduced-motion`.
 - **Katalog Grid, Daftar, Pencarian, & Sortir** — Cari judul/penulis/kategori, filter jenis media & ketersediaan stok, sortir (*Terbaru*, *Harga Termurah*, *Harga Termahal*, *Halaman Terbanyak*), serta alih tampilan **Grid ↔ Daftar**.
-- **Sistem Anggota 3 Tier & Demo 1-Klik** — Daftar atau masuk sebagai **Anggota Reguler** (0%, maks 7 hari, 2 buku), **Anggota Premium** (20%, bebas biaya layanan, maks 14 hari, 5 buku), atau **Dosen & Peneliti** (30%, maks 21 hari, 8 buku) menggunakan autentikasi sesi PHP.
-- **Sewa Real-Time & Perpanjang (+3 Hari) Polimorfik** — Total biaya & diskon dihitung langsung oleh server PHP melalui endpoint `?api=simulate`, serta pinjaman aktif dapat diperpanjang (`+3 hari`) sesuai batas tier anggota.
-- **Mini Web E-Reader & Struk Digital Cetak PDF** — Baca cuplikan atau naskah berlisensi penuh dengan kontrol ukuran huruf (`A−`/`A+`) dan 3 mode kertas (**Terang**, **Sepia**, **Gelap**), plus modal **Struk Digital** lengkap dengan Kode Invoice, Token DRM, dan tombol **Cetak / Simpan PDF**.
+- **Mini Web E-Reader & Struk Digital Cetak PDF** — Baca cuplikan atau naskah berlisensi penuh (`A−`/`A+`, 3 mode kertas), serta struk resmi lengkap Kode Invoice, Token DRM, rincian polimorfik, dan CSS `@media print`.
 
 ## Arsitektur PHP 8.x OOP (`src/` — 16 Class & Interface)
 
@@ -75,9 +106,3 @@ Prototipe web interaktif manajemen katalog dan transaksi penyewaan e-book untuk 
 1. Salin atau letakkan folder proyek ke `C:\laragon\www\arkadia` *(Laragon)* atau `C:\xampp\htdocs\arkadia` *(XAMPP)*.
 2. Pastikan modul **Apache** sudah aktif.
 3. Buka **`http://localhost/arkadia`** di browser.
-
-### Panduan Uji Cepat untuk Penilaian
-
-- **Uji Polimorfisme & Sewa:** Klik **Masuk** &rarr; pilih salah satu tombol **akun demo 1-klik** (Reguler / Premium / Dosen), lalu sewa buku di **Katalog** untuk melihat perbedaan diskon, biaya layanan, dan batas hari secara langsung.
-- **Uji Arsitektur OOP:** Buka menu **Info Sistem** untuk melihat ringkasan pemenuhan rubrik dan struktur seluruh **16 class/interface** yang dibaca langsung oleh **PHP Reflection API**.
-- **Reset Data Demo:** Klik ikon **Reset** (panah melingkar) di kanan atas header untuk mengembalikan data awal ke `6` e-book, `4` anggota, dan `4` transaksi contoh.
