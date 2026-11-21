@@ -293,6 +293,7 @@ code {
     position: relative;
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0;
     gap: 6px;
     padding: 0 12px;
     border: 0;
@@ -1277,16 +1278,11 @@ html[data-theme="dark"] .icon-moon {
 
 .cat-strip__inner {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     padding-top: 12px;
     padding-bottom: 12px;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.cat-strip__inner::-webkit-scrollbar {
-    display: none;
 }
 
 .cat-strip__label {
@@ -1298,6 +1294,7 @@ html[data-theme="dark"] .icon-moon {
 }
 
 .cat-pill {
+    flex: 0 0 auto;
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text-2);
@@ -2050,6 +2047,7 @@ html[data-theme="dark"] .icon-moon {
 }
 
 .chip {
+    flex-shrink: 0;
     padding: 6px 14px;
     border-radius: 99px;
     border: 1px solid var(--border-strong);
@@ -2057,6 +2055,7 @@ html[data-theme="dark"] .icon-moon {
     color: var(--text-2);
     font-size: .83rem;
     font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
     transition: all .15s ease;
 }
@@ -5528,12 +5527,37 @@ html[data-theme="dark"] .member-card::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .hero-eyebrow, .hero-banner h1, .hero-lead, .hero-cta, .hero-metrics,
-    .hero-float, .hero-showcase__glow, .editorial-marquee__track,
-    .hero-banner::before, .live-dot::after, .book-card.is-wave, .ripple-fx { animation: none !important; }
-    .cover::after { display: none; }
-    .team-panel, .team-panel__img, .team-panel__drawer { transition: none !important; }
-    html.js-motion [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
+
+    .hero-eyebrow,
+    .hero-banner h1,
+    .hero-lead,
+    .hero-cta,
+    .hero-metrics,
+    .hero-float,
+    .hero-showcase__glow,
+    .editorial-marquee__track,
+    .hero-banner::before,
+    .live-dot::after,
+    .book-card.is-wave,
+    .ripple-fx {
+        animation: none !important;
+    }
+
+    .cover::after {
+        display: none;
+    }
+
+    .team-panel,
+    .team-panel__img,
+    .team-panel__drawer {
+        transition: none !important;
+    }
+
+    html.js-motion [data-reveal] {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
 }
 
 /* ---------------- Print Receipt Sheet ---------------- */
