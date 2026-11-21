@@ -76,12 +76,23 @@ use App\Support\ViewHelper;
                     </div>
                     <div class="loan-card__side">
                         <span class="due <?= $dueClass ?>"><?= ViewHelper::e($dueText) ?></span>
-                        <form method="POST" action="index.php" class="return-form">
-                            <input type="hidden" name="action" value="return_ebook">
-                            <input type="hidden" name="transaction_id" value="<?= ViewHelper::e($loan->getId()) ?>">
-                            <input type="hidden" name="return_tab" value="loans">
-                            <button type="submit" class="btn btn--success btn--sm">Kembalikan</button>
-                        </form>
+                        <div class="loan-actions">
+                            <button type="button" class="btn btn--soft btn--sm" data-read-book="<?= ViewHelper::e($loan->getEbookId()) ?>" data-read-mode="full">Baca</button>
+                            <button type="button" class="btn btn--ghost btn--sm" data-open-receipt="<?= ViewHelper::e($loan->getId()) ?>">Struk</button>
+                            <form method="POST" action="index.php" class="inline-form">
+                                <input type="hidden" name="action" value="extend_ebook">
+                                <input type="hidden" name="transaction_id" value="<?= ViewHelper::e($loan->getId()) ?>">
+                                <input type="hidden" name="extra_days" value="3">
+                                <input type="hidden" name="return_tab" value="loans">
+                                <button type="submit" class="btn btn--ghost btn--sm" title="Perpanjang masa sewa 3 hari">+3 hari</button>
+                            </form>
+                            <form method="POST" action="index.php" class="inline-form return-form">
+                                <input type="hidden" name="action" value="return_ebook">
+                                <input type="hidden" name="transaction_id" value="<?= ViewHelper::e($loan->getId()) ?>">
+                                <input type="hidden" name="return_tab" value="loans">
+                                <button type="submit" class="btn btn--success btn--sm">Kembalikan</button>
+                            </form>
+                        </div>
                     </div>
                 </article>
             <?php endforeach; ?>
@@ -106,11 +117,12 @@ use App\Support\ViewHelper;
                     <th>Lama sewa</th>
                     <th>Dikembalikan</th>
                     <th class="num">Total</th>
+                    <th class="num">Struk</th>
                 </tr>
             </thead>
             <tbody id="historyTableBody">
                 <?php if (count($historyLoans) === 0): ?>
-                    <tr><td colspan="5" class="muted center">Belum ada riwayat.</td></tr>
+                    <tr><td colspan="6" class="muted center">Belum ada riwayat.</td></tr>
                 <?php else: ?>
                     <?php foreach ($historyLoans as $h): ?>
                         <?php $hideHist = ($currentUser !== null && $h->getMemberId() !== $currentUser->getId()); ?>
@@ -123,10 +135,11 @@ use App\Support\ViewHelper;
                             <td><?= $h->getDurationDays() ?> hari</td>
                             <td><?= ViewHelper::formatTanggal($h->getReturnDate()) ?></td>
                             <td class="num"><strong><?= ViewHelper::formatRupiah($h->getTotalCost()) ?></strong></td>
+                            <td class="num"><button type="button" class="link-btn small" data-open-receipt="<?= ViewHelper::e($h->getId()) ?>">Lihat struk</button></td>
                         </tr>
                     <?php endforeach; ?>
                     <tr id="emptyMyHistoryRow" <?= ($currentUser !== null && count($myHistoryLoans) === 0) ? '' : 'hidden' ?>>
-                        <td colspan="5" class="muted center">Belum ada riwayat pengembalian untuk akun ini.</td>
+                        <td colspan="6" class="muted center">Belum ada riwayat pengembalian untuk akun ini.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>

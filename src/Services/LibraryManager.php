@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\MediaItem;
 use App\Models\Transaction;
 use App\Models\User;
+use DateTimeImmutable;
 use DomainException;
 use InvalidArgumentException;
 
@@ -272,6 +273,64 @@ class LibraryManager
         if ($member !== null) {
             $member->decrementActiveLoans();
         }
+
+        $this->persistAll();
+        return $trx;
+    }
+
+    /**
+     * Memperpanjang masa sewa e-book secara polimorfik dengan validasi batas maksimal tier.
+     */
+    public function extendRentalTransaction(string $transactionId, int $extraDays = 3): Transaction
+    {
+        $trx = $this->transactions[$transactionId] ?? null;
+        if ($trx === null) {
+            throw new InvalidArgumentException('ID Transaksi tidak ditemukan.');
+        }
+
+        if (!$trx->isActive()) {
+            throw new DomainException('Hanya peminjaman aktif yang dapat diperpanjang.');
+        }
+
+        if ($extraDays < 1) {
+            throw new InvalidArgumentException('Tambahan durasi minimal adalah 1 hari.');
+        }
+
+        $member = $this->getMemberById($trx->getMemberId());
+        $ebook = $this->getEbookById($trx->getEbookId());
+        if ($member === null || $ebook === null) {
+            throw new DomainException('Data anggota atau e-book tidak ditemukan.');
+        }
+
+        $newDays = $trx->getDurationDays() + $extraDays;
+        if ($newDays > $member->getMaxBorrowDays()) {
+            throw new DomainException(
+                sprintf(
+                    'Perpanjangan gagal: total durasi %d hari melebihi batas maksimal %d hari untuk %s.',
+                    $newDays,
+                    $member->getMaxBorrowDays(),
+                    $member->getTierLabel()
+                )
+            );
+        }
+
+        // Hitung ulang tarif & diskon polimorfik untuk total durasi baru
+        $newBaseCost = $ebook->calculateBaseRentalCost($newDays);
+        $newServiceFee = $member->waivesServiceFee() ? 0.0 : $ebook->getServiceFee();
+        $newDiscountAmount = $member->calculateDiscountAmount($newBaseCost);
+        $newTotalCost = max(0.0, round($newBaseCost + $newServiceFee - $newDiscountAmount, 2));
+        $newDueDate = (new DateTimeImmutable($trx->getBorrowDate()))
+            ->modify("+{$newDays} days")
+            ->format('Y-m-d');
+
+        $trx->extend(
+            $newDays,
+            $newDueDate,
+            $newBaseCost,
+            $newServiceFee,
+            $newDiscountAmount,
+            $newTotalCost
+        );
 
         $this->persistAll();
         return $trx;

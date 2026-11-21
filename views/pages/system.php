@@ -20,7 +20,7 @@ use App\Support\ViewHelper;
                 <li>Elemen semantik HTML5: <code>header</code>, <code>nav</code>, <code>main</code>, <code>section</code>, <code>article</code>, <code>aside</code>, <code>dialog</code>, <code>footer</code></li>
                 <li>Validasi form di JavaScript (masuk, daftar, buku) + validasi ulang di PHP</li>
                 <li>Layout responsif (CSS Grid/Flexbox) dengan tema terang &amp; gelap serta tampilan Grid/Daftar</li>
-                <li>Interaktif: pencarian live, filter, auth &amp; sewa modal, kalkulasi via <code>fetch()</code></li>
+                <li>Interaktif: pencarian, sortir katalog, E-Reader 3 mode kertas, struk cetak PDF, kalkulasi via <code>fetch()</code></li>
             </ul>
         </article>
         <article class="rubric-card">

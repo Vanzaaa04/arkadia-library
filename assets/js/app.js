@@ -133,9 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    /* ---------- 4. Pencarian, filter, & Grid/List katalog ---------- */
+    /* ---------- 4. Pencarian, filter, sortir, & Grid/List katalog ---------- */
     const searchInput = $('#searchInput');
     const typeFilter = $('#typeFilter');
+    const sortFilter = $('#sortFilter');
     const availableOnly = $('#availableOnly');
     const catalogGrid = $('#catalogGrid');
     const catalogCards = $$('#catalogGrid .book-card');
@@ -144,6 +145,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnViewGrid = $('#btnViewGrid');
     const btnViewList = $('#btnViewList');
     let activeCategory = 'all';
+
+    function sortCatalog() {
+        if (!catalogGrid || !sortFilter) return;
+        const mode = sortFilter.value;
+        const sorted = [...catalogCards].sort((a, b) => {
+            if (mode === 'price-asc') return Number(a.dataset.rate) - Number(b.dataset.rate);
+            if (mode === 'price-desc') return Number(b.dataset.rate) - Number(a.dataset.rate);
+            if (mode === 'pages-desc') return Number(b.dataset.pages) - Number(a.dataset.pages);
+            return Number(a.dataset.order) - Number(b.dataset.order);
+        });
+        const frag = document.createDocumentFragment();
+        sorted.forEach((card) => frag.appendChild(card));
+        catalogGrid.appendChild(frag);
+    }
 
     function applyFilters() {
         const q = searchInput.value.trim().toLowerCase();
@@ -170,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     searchInput?.addEventListener('input', applyFilters);
     typeFilter?.addEventListener('change', applyFilters);
+    sortFilter?.addEventListener('change', () => { sortCatalog(); applyFilters(); });
     availableOnly?.addEventListener('change', applyFilters);
     $$('.chip[data-cat]').forEach((chip) => {
         chip.addEventListener('click', () => setActiveCategoryChip(chip.dataset.cat));
@@ -183,6 +199,10 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#btnResetFilter')?.addEventListener('click', () => {
         searchInput.value = '';
         typeFilter.value = 'all';
+        if (sortFilter) {
+            sortFilter.value = 'default';
+            sortCatalog();
+        }
         availableOnly.checked = false;
         setActiveCategoryChip('all');
     });
@@ -234,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         $('.cover__author', el).textContent = shortAuthor(book.author);
     }
 
-    /* ---------- 5. Modal detail buku ---------- */
+    /* ---------- 5. Modal detail buku, Mini E-Reader, & Struk Digital ---------- */
     const bookModal = $('#bookModal');
     let detailBookId = null;
     function openBookDetail(id) {
@@ -263,6 +283,165 @@ document.addEventListener('DOMContentLoaded', () => {
         bookModal.close();
         openRent(detailBookId);
     });
+    $('#bmReadBtn')?.addEventListener('click', () => {
+        bookModal.close();
+        openReader(detailBookId, 'sample');
+    });
+
+    /* --- Mini Web E-Reader --- */
+    const readerModal = $('#readerModal');
+    const readerShell = $('#readerShell');
+    const readerContent = $('#rdContent');
+    const SAMPLE_CHAPTERS = {
+        'EBK-101': [
+            { title: 'Reliabilitas & Konsistensi pada Skala Terdistribusi', paragraphs: ['Sistem penyimpanan data modern dituntut tetap melayani pembacaan dan penulisan meskipun sebagian node mengalami kegagalan jaringan atau partisi sementara.', 'Pendekatan konsensus seperti Raft memisahkan pemilihan pemimpin (leader election) dari replikasi log secara deterministik agar setiap salinan state machine konvergen pada urutan transaksi yang identik.', 'Dalam praktik produksi, pemisahan antara beban OLTP latensi rendah dan jalur analitik berbasis event log mencegah lonjakan kueri pelaporan mengganggu transaksi pengguna aktif.'] },
+            { title: 'Replikasi Multi-Wilayah & Resolusi Konflik', paragraphs: ['Ketika aplikasi beroperasi lintas benua, latensi kecepatan cahaya memaksa arsitek memilih antara sinkronisasi ketat atau model replikasi asinkron dengan jendela konvergensi terukur.', 'Versi vektor (version vectors) dan penanda waktu logis hybrid membantu sistem mendeteksi penulisan konkuren secara akurat tanpa bergantung pada jam dinding fisik yang rentan melenceng.'] },
+            { title: 'Pemrosesan Aliran Event Real-Time', paragraphs: ['Alih-alih menganggap basis data sebagai potret statis, arsitektur log berorientasi event memperlakukan setiap perubahan sebagai fakta abadi yang dapat diputar ulang kapan saja.', 'Materialized view lalu dibangun secara inkremental dari aliran event yang sama, memberi pembaca tampilan cepat tanpa mengorbankan jejak audit.'] },
+        ],
+        'EBK-102': [
+            { title: 'Disiplin Strict Types & Kontrak Domain di PHP 8.3', paragraphs: ['Mengaktifkan declare(strict_types=1) pada setiap berkas model membuat batas kontrak antar objek ditegakkan secara eksplisit oleh runtime PHP sejak pemanggilan pertama.', 'Properti bertipe dan enum atau abstract class mencegah data tidak sah masuk ke lapisan bisnis, sehingga logika perhitungan tetap bersih dari validasi defensif berulang.'] },
+            { title: 'Enkapsulasi State & Value Object', paragraphs: ['Daripada menyebarkan array asosiatif tanpa bentuk pasti ke seluruh controller, membungkus identitas transaksi dan tarif ke dalam class khusus membuat setiap perubahan state tervalidasi terpusat.', 'Method mutator yang bermakna seperti markAsReturned() atau extend() menjaga invarian bisnis tetap utuh setiap kali data disimpan ke berkas JSON atau XML.'] },
+            { title: 'Polimorfisme Tanpa Ketergantungan Framework', paragraphs: ['Memisahkan aturan diskon anggota ke dalam hirarki User dan kalkulasi biaya media ke hirarki MediaItem memungkinkan sistem menghitung ribuan variasi harga melalui satu panggilan antarmuka yang seragam.', 'Arsitektur bersih seperti ini mudah diuji, dibaca dengan Reflection API, dan dipelihara lintas tim.'] },
+        ],
+        'EBK-103': [
+            { title: 'Hierarki Visual Sebelum Dekorasi', paragraphs: ['Antarmuka digital yang terasa mahal jarang bertumpu pada bayangan berlapis atau gradien mencolok; kekuatannya justru lahir dari kontras ukuran huruf, berat font, dan spasi putih yang disengaja.', 'Mulailah dengan menaikkan bobot dan ukuran elemen utama sebelum memberi warna pembeda pada keterangan sekunder.'] },
+            { title: 'Ritme Spasi Grid 8-Piksel & Warna Permukaan', paragraphs: ['Mengunci komponen pada kelipatan 4px dan 8px menertibkan proporsi kartu, jarak antar kolom, dan ketinggian tombol secara konsisten di layar desktop maupun ponsel.', 'Memadukan latar hangat berkarakter dengan permukaan putih bersih menciptakan kedalaman alami tanpa garis batas berlebih.'] },
+            { title: 'Mikro-Interaksi & Tipografi Tabel Komersial', paragraphs: ['Angka harga, stok lisensi, dan tanggal jatuh tempo jauh lebih nyaman dipindai ketika diselaraskan rata kanan menggunakan angka tabular berjarak seragam.'] },
+        ],
+        'EBK-104': [
+            { title: 'Optimasi Gradien Stokastik & Generalisasi Model', paragraphs: ['Di balik performa jaringan saraf berparameter besar terdapat interaksi halus antara ukuran batch, penjadwalan learning rate, dan lanskap kurva fungsi objektif.', 'Bukti empiris menunjukkan bahwa lintasan optimasi sering memilih wilayah minima yang datar sehingga model tetap tangguh terhadap pergeseran distribusi data uji.'] },
+            { title: 'Mekanisme Attention & Representasi Kontekstual', paragraphs: ['Arsitektur Transformer menggantikan ketergantungan berurutan murni dengan bobot perhatian diri (self-attention) yang dapat memproses seluruh konteks dalam operasi matriks paralel.'] },
+            { title: 'Teori Informasi Variansional dalam Inferensi Modern', paragraphs: ['Batas bawah bukti (ELBO) menjembatani kesenjangan antara model generatif probabilistik yang ekspresif dengan teknik optimasi berbasis backpropagation modern.'] },
+        ],
+        'EBK-105': [
+            { title: 'Proporsi Matematis pada Halaman Editorial', paragraphs: ['Sistem grid lahir dari kebutuhan menghadirkan keteraturan visual sehingga pembaca dapat memindai gagasan kompleks tanpa kelelahan mata.', 'Pembagian kolom yang disiplin menetapkan ritme baca yang tenang antara judul, isi naskah, keterangan pinggir, dan ruang kosong bernapas.'] },
+            { title: 'Transisi Grid Cetak ke Layar Responsif Modern', paragraphs: ['Pada media digital, lebar viewport tidak lagi tetap seperti kertas cetak; CSS Grid memungkinkan rasio kolom beradaptasi luwes dari satu kolom ponsel hingga galeri lima kolom di desktop.'] },
+            { title: 'Tipografi Fungsional & Konsistensi Navigasi', paragraphs: ['Ketika skala huruf dan batas penulisan terjaga pada 55 hingga 72 karakter per baris, kecepatan pemahaman pembaca meningkat drastis.'] },
+        ],
+        'EBK-106': [
+            { title: 'Handshake TLS 1.3 & Keamanan Lapisan Transport', paragraphs: ['Protokol TLS modern memangkas putaran negosiasi kunci menjadi satu perjalanan pulang-pergi saja dengan menyingkirkan cipher suite usang dan selalu memprioritaskan forward secrecy.', 'Setiap sesi pertukaran data terenkripsi menggunakan kunci sementara yang tidak dapat didekripsi ulang walaupun kunci privat server bocor di masa depan.'] },
+            { title: 'Autentikasi WebAuthn & Model Zero-Trust', paragraphs: ['Kredensial kriptografis berbasis perangkat keras menggantikan kerentanan kata sandi statis yang mudah dicuri melalui serangan phishing.'] },
+            { title: 'Audit Sesi, Validasi Input, & Isolasi Token DRM', paragraphs: ['Pertahanan aplikasi web menuntut validasi ganda: pengalaman instan di sisi peramban serta penegakan kontrak ketat oleh objek layanan di sisi server.'] },
+        ],
+    };
+
+    let readerBook = null;
+    let readerMode = 'sample';
+    let readerIndex = 0;
+    let readerSize = 16;
+
+    function buildChapters(book) {
+        if (SAMPLE_CHAPTERS[book.id]) return SAMPLE_CHAPTERS[book.id];
+        return [
+            { title: `Pengantar: ${book.category}`, paragraphs: [book.synopsis, `Edisi ${book.media_type_label} karya ${book.author} (${book.publish_year}) ini disajikan dalam format ${book.file_format} dengan total ${book.pages} halaman terstruktur.`] },
+            { title: 'Konsep Inti & Spesifikasi Teknis', paragraphs: [`Rujukan teknis: ${book.technical_metadata}. Bagian ini menguraikan kerangka teori, studi kasus implementasi, dan praktik terbaik pada topik ${book.category}.`] },
+            { title: 'Ringkasan Penerapan & Daftar Pustaka', paragraphs: [`Seluruh bab dalam publikasi "${book.title}" dirancang untuk mempercepat pemahaman terapan dan dapat diakses penuh selama masa sewa aktif di Arkadia.`] },
+        ];
+    }
+
+    function setReaderPaper(paper) {
+        if (!readerShell) return;
+        readerShell.setAttribute('data-paper', paper);
+        $$('[data-paper-btn]', readerShell).forEach((b) => b.classList.toggle('is-active', b.dataset.paperBtn === paper));
+    }
+
+    function setReaderFont(nextSize) {
+        readerSize = Math.min(22, Math.max(14, nextSize));
+        readerContent?.style.setProperty('--rd-size', `${readerSize}px`);
+        const sizeLabel = $('#rdFontSize');
+        if (sizeLabel) sizeLabel.textContent = `${readerSize}px`;
+    }
+
+    function renderReaderPage() {
+        if (!readerBook) return;
+        const chapters = buildChapters(readerBook);
+        const total = chapters.length;
+        const ch = chapters[readerIndex] || chapters[0];
+        const pct = Math.round(((readerIndex + 1) / total) * 100);
+        const isLast = readerIndex >= total - 1;
+
+        $('#rdChapterNum').textContent = `Bab ${readerIndex + 1} · ${readerBook.category}`;
+        $('#rdChapterTitle').textContent = ch.title;
+
+        const body = $('#rdBody');
+        body.replaceChildren(...ch.paragraphs.map((text) => {
+            const p = document.createElement('p');
+            p.textContent = text;
+            return p;
+        }));
+
+        $('#rdCta').hidden = !(readerMode === 'sample' && isLast);
+        $('#rdProgressFill').style.width = `${pct}%`;
+        $('#rdPageInfo').textContent = `Bab ${readerIndex + 1} dari ${total} · ${pct}%`;
+        $('#rdPrev').disabled = readerIndex === 0;
+        $('#rdNext').disabled = isLast;
+        $('.reader-viewport').scrollTop = 0;
+    }
+
+    function openReader(bookId, mode = 'sample') {
+        const b = findBook(bookId);
+        if (!b || !readerModal) return;
+        readerBook = b;
+        readerMode = mode;
+        readerIndex = 0;
+
+        const badge = $('#rdModeBadge');
+        badge.textContent = mode === 'full' ? 'Lisensi aktif' : 'Cuplikan';
+        badge.classList.toggle('reader-badge--full', mode === 'full');
+        $('#rdTitle').textContent = b.title;
+        $('#rdAuthor').textContent = `${b.author} · ${b.pages} halaman`;
+
+        const siteDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        setReaderPaper(siteDark ? 'dark' : 'light');
+        setReaderFont(readerSize);
+        renderReaderPage();
+        readerModal.showModal();
+    }
+
+    $$('[data-read-book]').forEach((btn) => {
+        btn.addEventListener('click', () => openReader(btn.dataset.readBook, btn.dataset.readMode || 'full'));
+    });
+    $('#rdPrev')?.addEventListener('click', () => { if (readerIndex > 0) { readerIndex--; renderReaderPage(); } });
+    $('#rdNext')?.addEventListener('click', () => { readerIndex++; renderReaderPage(); });
+    $('#rdFontDown')?.addEventListener('click', () => setReaderFont(readerSize - 1));
+    $('#rdFontUp')?.addEventListener('click', () => setReaderFont(readerSize + 1));
+    $$('[data-paper-btn]').forEach((btn) => btn.addEventListener('click', () => setReaderPaper(btn.dataset.paperBtn)));
+    $('#rdRentNow')?.addEventListener('click', () => {
+        readerModal.close();
+        if (readerBook) openRent(readerBook.id);
+    });
+
+    /* --- Struk Digital & Cetak PDF --- */
+    const receiptModal = $('#receiptModal');
+    const findTransaction = (id) => (state.transactions || []).find((t) => t.id === id);
+
+    function openReceipt(trxId) {
+        const t = findTransaction(trxId);
+        if (!t || !receiptModal) return;
+        const active = t.status === 'active';
+        const statusEl = $('#rcStatus');
+        statusEl.textContent = active ? 'Aktif' : 'Selesai';
+        statusEl.className = `pill ${active ? 'pill--warning' : 'pill--success'}`;
+
+        $('#rcCode').textContent = t.transaction_code;
+        $('#rcToken').textContent = t.access_token;
+        $('#rcMember').textContent = t.member_name;
+        $('#rcTier').textContent = t.member_tier;
+        $('#rcBorrowDate').textContent = formatTanggal(t.borrow_date);
+        $('#rcDueDateLabel').textContent = active ? 'Jatuh tempo' : 'Dikembalikan';
+        $('#rcDueDate').textContent = formatTanggal(active ? t.due_date : (t.return_date || t.due_date));
+
+        $('#rcBookTitle').textContent = t.ebook_title;
+        $('#rcBookMeta').textContent = `${t.ebook_type} · Durasi sewa ${t.duration_days} hari`;
+        $('#rcBase').textContent = rupiah(t.base_cost);
+        $('#rcService').textContent = t.service_fee > 0 ? rupiah(t.service_fee) : 'Rp 0 (Gratis)';
+        $('#rcDiscount').textContent = t.discount_amount > 0 ? '−' + rupiah(t.discount_amount) : 'Rp 0';
+        $('#rcTotal').textContent = rupiah(t.total_cost);
+        receiptModal.showModal();
+    }
+
+    $$('[data-open-receipt]').forEach((btn) => btn.addEventListener('click', () => openReceipt(btn.dataset.openReceipt)));
+    $('#btnPrintReceipt')?.addEventListener('click', () => window.print());
 
     /* ---------- 6. Modal sewa (berbasis akun login) ---------- */
     const rentModal = $('#rentModal');

@@ -100,7 +100,7 @@ final class ViewHelper
         );
     }
 
-    public static function renderBookCard(MediaItem $book): string
+    public static function renderBookCard(MediaItem $book, int $order = 0): string
     {
         $available = $book->isAvailable();
         ob_start(); ?>
@@ -108,7 +108,10 @@ final class ViewHelper
                  data-search="<?= self::e(strtolower($book->getTitle() . ' ' . $book->getAuthor() . ' ' . $book->getCategory() . ' ' . $book->getIsbn())) ?>"
                  data-category="<?= self::e($book->getCategory()) ?>"
                  data-type="<?= self::e($book->getMediaTypeCode()) ?>"
-                 data-available="<?= $available ? '1' : '0' ?>">
+                 data-available="<?= $available ? '1' : '0' ?>"
+                 data-rate="<?= (int) round($book->getDailyRate()) ?>"
+                 data-pages="<?= $book->getPages() ?>"
+                 data-order="<?= $order ?>">
             <button type="button" class="book-card__cover" data-open-book="<?= self::e($book->getId()) ?>" aria-label="Lihat detail <?= self::e($book->getTitle()) ?>">
                 <?= self::renderCover($book) ?>
                 <span class="stock-tag <?= $available ? '' : 'stock-tag--out' ?>">

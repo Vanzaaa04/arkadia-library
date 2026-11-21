@@ -28,7 +28,10 @@ use App\Support\ViewHelper;
                 </dl>
                 <div class="book-detail__buy">
                     <p class="price price--lg"><strong id="bmPrice"></strong><span>/hari</span></p>
-                    <button type="button" id="bmRentBtn" class="btn btn--primary btn--lg">Sewa buku ini</button>
+                    <div class="book-detail__actions">
+                        <button type="button" id="bmReadBtn" class="btn btn--ghost btn--lg">Baca cuplikan</button>
+                        <button type="button" id="bmRentBtn" class="btn btn--primary btn--lg">Sewa buku ini</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -195,6 +198,103 @@ use App\Support\ViewHelper;
                 </div>
                 <button type="submit" class="btn btn--primary btn--full">Daftar &amp; Masuk</button>
             </form>
+        </div>
+    </div>
+</dialog>
+
+<!-- ===================== MODAL: MINI WEB E-READER ===================== -->
+<dialog id="readerModal" class="modal modal--reader" aria-labelledby="rdTitle">
+    <div class="modal__inner reader-shell" id="readerShell" data-paper="light">
+        <header class="reader-bar">
+            <div class="reader-bar__title">
+                <div class="reader-bar__top">
+                    <span id="rdModeBadge" class="reader-badge">Cuplikan</span>
+                    <strong id="rdTitle">Judul E-Book</strong>
+                </div>
+                <small id="rdAuthor">Penulis</small>
+            </div>
+            <div class="reader-controls">
+                <div class="reader-font-group" role="group" aria-label="Ukuran huruf">
+                    <button type="button" id="rdFontDown" aria-label="Perkecil huruf">A&minus;</button>
+                    <span id="rdFontSize">16px</span>
+                    <button type="button" id="rdFontUp" aria-label="Perbesar huruf">A+</button>
+                </div>
+                <div class="reader-themes" role="group" aria-label="Warna kertas">
+                    <button type="button" class="reader-theme-btn is-active" data-paper-btn="light">Terang</button>
+                    <button type="button" class="reader-theme-btn" data-paper-btn="sepia">Sepia</button>
+                    <button type="button" class="reader-theme-btn" data-paper-btn="dark">Gelap</button>
+                </div>
+                <button type="button" class="reader-close" data-close-modal aria-label="Tutup">&times;</button>
+            </div>
+        </header>
+
+        <div class="reader-progress" aria-hidden="true">
+            <span id="rdProgressFill"></span>
+        </div>
+
+        <div class="reader-viewport">
+            <article class="reader-page" id="rdContent">
+                <span class="reader-kicker" id="rdChapterNum">Bab 1</span>
+                <h2 id="rdChapterTitle">Judul Bab</h2>
+                <div class="reader-copy" id="rdBody"></div>
+                <aside class="reader-cta" id="rdCta" hidden>
+                    <div>
+                        <strong>Pratinjau terbatas selesai.</strong>
+                        <p>Sewa e-book ini untuk membuka akses penuh ke seluruh bab, unduhan DRM, dan catatan kaki lengkap.</p>
+                    </div>
+                    <button type="button" id="rdRentNow" class="btn btn--primary btn--sm">Sewa buku ini</button>
+                </aside>
+            </article>
+        </div>
+
+        <footer class="reader-foot">
+            <button type="button" id="rdPrev" class="btn btn--ghost btn--sm">&larr; Bab sebelumnya</button>
+            <span id="rdPageInfo" class="reader-page-info">Bab 1 dari 3 &middot; 33%</span>
+            <button type="button" id="rdNext" class="btn btn--primary btn--sm">Bab berikutnya &rarr;</button>
+        </footer>
+    </div>
+</dialog>
+
+<!-- ===================== MODAL: STRUK DIGITAL & CETAK PDF ===================== -->
+<dialog id="receiptModal" class="modal modal--receipt" aria-labelledby="rcCode">
+    <div class="modal__inner modal__inner--receipt">
+        <button type="button" class="modal__close no-print" data-close-modal aria-label="Tutup">&times;</button>
+        <div class="receipt-sheet" id="receiptSheet">
+            <div class="receipt-head">
+                <div>
+                    <span class="receipt-brand">ARKADIA</span>
+                    <p class="receipt-sub">Bukti Transaksi Sewa Digital</p>
+                </div>
+                <span id="rcStatus" class="pill pill--success">Selesai</span>
+            </div>
+
+            <dl class="receipt-meta">
+                <div><dt>Kode Invoice</dt><dd class="mono" id="rcCode">-</dd></div>
+                <div><dt>Token Lisensi DRM</dt><dd><code id="rcToken">-</code></dd></div>
+                <div><dt>Penyewa</dt><dd id="rcMember">-</dd></div>
+                <div><dt>Jenis Anggota</dt><dd id="rcTier">-</dd></div>
+                <div><dt>Tanggal Pinjam</dt><dd id="rcBorrowDate">-</dd></div>
+                <div><dt id="rcDueDateLabel">Jatuh tempo</dt><dd id="rcDueDate">-</dd></div>
+            </dl>
+
+            <div class="receipt-item">
+                <span class="receipt-item__kicker">Koleksi digital disewa</span>
+                <strong id="rcBookTitle">-</strong>
+                <small class="muted" id="rcBookMeta">-</small>
+            </div>
+
+            <div class="bill receipt-bill">
+                <div class="bill__row"><span>Biaya sewa pokok</span><span id="rcBase">-</span></div>
+                <div class="bill__row"><span>Biaya layanan</span><span id="rcService">-</span></div>
+                <div class="bill__row bill__row--discount"><span>Diskon anggota</span><span id="rcDiscount">-</span></div>
+                <div class="bill__total"><span>Total dibayar</span><strong id="rcTotal">-</strong></div>
+            </div>
+
+            <p class="receipt-note">Struk ini dihasilkan secara otomatis oleh mesin transaksi PHP OOP Arkadia. Simpan kode token DRM sebagai bukti lisensi baca resmi.</p>
+        </div>
+        <div class="rent-foot no-print">
+            <button type="button" class="btn btn--ghost" data-close-modal>Tutup</button>
+            <button type="button" id="btnPrintReceipt" class="btn btn--primary">Cetak / Simpan PDF</button>
         </div>
     </div>
 </dialog>

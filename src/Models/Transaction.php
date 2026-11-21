@@ -173,6 +173,25 @@ class Transaction implements SerializableEntityInterface
     }
 
     /**
+     * Memperpanjang masa peminjaman e-book dan memperbarui rincian biaya polimorfik.
+     */
+    public function extend(
+        int $newDurationDays,
+        string $newDueDate,
+        float $newBaseCost,
+        float $newServiceFee,
+        float $newDiscountAmount,
+        float $newTotalCost
+    ): void {
+        $this->durationDays = max(1, $newDurationDays);
+        $this->dueDate = $newDueDate;
+        $this->baseCost = $newBaseCost;
+        $this->serviceFee = $newServiceFee;
+        $this->discountAmount = $newDiscountAmount;
+        $this->totalCost = $newTotalCost;
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     public static function fromArray(array $data): self

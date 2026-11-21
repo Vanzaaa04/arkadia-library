@@ -19,6 +19,7 @@ use App\Support\ViewHelper;
         window.ARKADIA_STATE = {
             catalog: <?= json_encode($clientCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>,
             members: <?= json_encode($clientMembers, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>,
+            transactions: <?= json_encode($clientTransactions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>,
             currentUser: <?= $currentUser !== null ? json_encode($currentUser->toArray(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) : 'null' ?>
         };
     </script>

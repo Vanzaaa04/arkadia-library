@@ -159,6 +159,27 @@ class RequestController
                     $nextTab = 'loans';
                     break;
 
+                case 'extend_ebook':
+                    $extraDays = max(1, (int) ($post['extra_days'] ?? 3));
+                    $trx = $this->manager->extendRentalTransaction(
+                        (string) ($post['transaction_id'] ?? ''),
+                        $extraDays
+                    );
+                    $_SESSION['flash'] = [
+                        'type' => 'success',
+                        'title' => 'Sewa diperpanjang',
+                        'message' => sprintf(
+                            '"%s" diperpanjang +%d hari hingga %s (total %d hari · %s).',
+                            $trx->getEbookTitle(),
+                            $extraDays,
+                            ViewHelper::formatTanggal($trx->getDueDate()),
+                            $trx->getDurationDays(),
+                            ViewHelper::formatRupiah($trx->getTotalCost())
+                        ),
+                    ];
+                    $nextTab = 'loans';
+                    break;
+
                 case 'add_ebook':
                     $ebook = $this->manager->addEbook($post);
                     $_SESSION['flash'] = [
@@ -272,6 +293,7 @@ class RequestController
 
         $clientCatalog = array_map(fn($b) => $b->toArray(), $ebooks);
         $clientMembers = array_map(fn($m) => $m->toArray(), $members);
+        $clientTransactions = array_map(fn($t) => $t->toArray(), $transactions);
         $loanBadgeCount = $currentUser !== null ? count($myActiveLoans) : count($activeLoans);
 
         return [
@@ -295,6 +317,7 @@ class RequestController
             'tierSamples' => $tierSamples,
             'clientCatalog' => $clientCatalog,
             'clientMembers' => $clientMembers,
+            'clientTransactions' => $clientTransactions,
             'loanBadgeCount' => $loanBadgeCount,
         ];
     }

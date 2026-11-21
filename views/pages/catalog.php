@@ -25,6 +25,12 @@ use App\Support\ViewHelper;
             <option value="academic">E-Book Akademik</option>
             <option value="interactive">E-Book Interaktif</option>
         </select>
+        <select id="sortFilter" class="select" aria-label="Urutkan katalog">
+            <option value="default">Urutkan: Terbaru</option>
+            <option value="price-asc">Harga Termurah</option>
+            <option value="price-desc">Harga Termahal</option>
+            <option value="pages-desc">Halaman Terbanyak</option>
+        </select>
         <label class="switch">
             <input type="checkbox" id="availableOnly">
             <span class="switch__track"><span class="switch__thumb"></span></span>
@@ -48,8 +54,8 @@ use App\Support\ViewHelper;
     </div>
 
     <div id="catalogGrid" class="book-grid">
-        <?php foreach ($ebooks as $book): ?>
-            <?= ViewHelper::renderBookCard($book) ?>
+        <?php foreach ($ebooks as $idx => $book): ?>
+            <?= ViewHelper::renderBookCard($book, $idx) ?>
         <?php endforeach; ?>
     </div>
 
