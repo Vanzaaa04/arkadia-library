@@ -1,5 +1,8 @@
 # ARKADIA — Digital E-Book Lending & Storefront
 
+> **Live Demo (Vercel):** [https://arkadia-library.vercel.app](https://arkadia-library.vercel.app)  
+> Proyek ini sudah tersedia secara online di **Vercel** dan dapat langsung diakses serta diuji coba melalui tautan di atas tanpa perlu instalasi lokal.
+
 ## Identitas Penyusun
 
 | Nama Lengkap | NIM | Peran |
